@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sonia | AI Secretary</title>
+    <title>TB-Assistant | Business Companion</title>
     <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#007bff">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -516,7 +516,7 @@
 <body>
     <header class="header">
         <h1>
-            <div class="status-dot"></div> Sonia Secretary
+            <div class="status-dot"></div> TB-Assistant
         </h1>
         <div class="mood-trigger" onclick="toggleMoods()">😊</div>
     </header>
@@ -533,14 +533,14 @@
             Gestresst</div>
     </div>
     <main id="chat-history">
-        <div class="message bot">Guten Tag, Thomas. 👋 Ich bin Sonia. Wie kann ich dich heute unterstützen?<div
+        <div class="message bot">Guten Tag, Chef. 👋 Ich bin Ihr TB-Assistant. Wie kann ich Sie heute unterstützen?<div
                 class="meta">System</div>
         </div>
     </main>
     <footer class="input-area">
         <button class="btn-round tool-btn" title="Dashboard" onclick="toggleDashboard()">📊</button>
         <button class="btn-round tool-btn" title="Morning Sync" onclick="morningSync()">🔄</button>
-        <input type="text" id="message-input" placeholder="Nachricht an Sonia..."
+        <input type="text" id="message-input" placeholder="Nachricht an Assistent..."
             onkeypress="if(event.key==='Enter') sendMessage()">
         <button class="btn-round send-btn" onclick="sendMessage()">➤</button>
     </footer>
@@ -590,57 +590,22 @@
         window.addMessage = (text, type) => {
             const h = document.getElementById('chat-history');
             const d = document.createElement('div'); d.className = `message ${type}`;
-
-            let dt = text;
-            let payload = null;
-
-            // 1. Try standard JSON code block
+            let dt = text; let payload = null;
             const jm = text.match(/```(?:json|JSON)?\n?([\s\S]*?)```/);
-            if (jm) {
-                try {
-                    payload = JSON.parse(jm[1].trim());
-                    dt = text.replace(jm[0], '');
-                } catch (e) { }
-            }
-
-            // 2. Fallback: Try to find raw JSON object if backticks are missing
+            if (jm) { try { payload = JSON.parse(jm[1].trim()); dt = text.replace(jm[0], ''); } catch (e) { } }
             if (!payload) {
                 const rawMatch = text.match(/(\{[\s\S]*\})/);
-                if (rawMatch) {
-                    try {
-                        const potential = JSON.parse(rawMatch[1].trim());
-                        if (potential.ui_type || potential.action) {
-                            payload = potential;
-                            dt = text.replace(rawMatch[1], '');
-                        }
-                    } catch (e) { }
-                }
+                if (rawMatch) { try { const potential = JSON.parse(rawMatch[1].trim()); if (potential.ui_type || potential.action) { payload = potential; dt = text.replace(rawMatch[1], ''); } } catch (e) { } }
             }
-
-            // Clean up markers
             dt = dt.replace(/```(?:json|JSON)?/gi, '').replace(/```/g, '').trim();
             d.innerHTML = dt.replace(/\n/g, '<br>');
-
-            if (payload) {
-                if (payload.action === 'save_preference') handleLearnAction(payload);
-                else renderA2UICard(d, payload);
-            }
-
-            const m = document.createElement('div'); m.className = 'meta';
-            m.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (payload) { if (payload.action === 'save_preference') handleLearnAction(payload); else renderA2UICard(d, payload); }
+            const m = document.createElement('div'); m.className = 'meta'; m.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             d.appendChild(m); h.appendChild(d); h.scrollTop = h.scrollHeight;
         };
 
         async function handleLearnAction(pay) {
-            console.log('Sonia learns Preference:', pay);
-            try {
-                await fetch('/api/brain/preferences', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: pay.key, value: pay.value })
-                });
-                addMessage(`Lerneffekt: ${pay.key} gemerkt! 🧠`, 'system');
-            } catch (e) { }
+            try { await fetch('/api/brain/preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: pay.key, value: pay.value }) }); addMessage(`Lerneffekt: ${pay.key} gemerkt! 🧠`, 'system'); } catch (e) { }
         }
 
         function renderA2UICard(cont, pay) {
@@ -674,14 +639,7 @@
 
         window.morningSync = async () => {
             addMessage('Starte Morning Routine... 🌀', 'system');
-            try {
-                const r = await fetch('/api/brain/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: "Sonia, mach den Morning Sync (Gmail, Salesforce, MS Tasks).", mood: currentMood })
-                });
-                const d = await r.json(); addMessage(d.text || '', 'bot');
-            } catch (e) { }
+            try { const r = await fetch('/api/brain/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: "Mach den Morning Sync (Gmail, Salesforce, MS Tasks).", mood: currentMood }) }); const d = await r.json(); addMessage(d.text || '', 'bot'); } catch (e) { }
         }
 
         window.toggleMoods = () => { const p = document.getElementById('mood-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; };
