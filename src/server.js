@@ -1,0 +1,82 @@
+/**
+ * Standalone Second Brain Server
+ * 
+ * Run: npm start
+ * Or: node src/server.js
+ */
+
+const express = require('express');
+const { BrainStorage, createBrainRoutes } = require('./index');
+
+// Create Express app
+const app = express();
+app.use(express.json());
+
+// CORS middleware (for frontend access)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+// Simple auth middleware (replace with your own)
+const authMiddleware = (req, res, next) => {
+    // Example: Check for API key in header (optional)
+    const apiKey = req.headers['x-api-key'];
+    const requiredKey = process.env.API_KEY;
+    
+    // If API_KEY is set, require it; otherwise allow all
+    if (requiredKey && apiKey !== requiredKey) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+};
+
+// Create Brain Storage instance
+const brainStorage = new BrainStorage({
+    storagePath: './data/brain',
+    // vectorStore: null // Optional: Add vector store for semantic search
+});
+
+// Create and mount routes
+const brainRoutes = createBrainRoutes(brainStorage, {
+    authMiddleware: authMiddleware
+});
+
+app.use('/api/brain', brainRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        module: 'second-brain',
+        version: '1.0.0',
+        storage: brainStorage.storagePath
+    });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.json({ 
+        message: 'Second Brain API',
+        version: '1.0.0',
+        endpoints: {
+            health: '/health',
+            api: '/api/brain',
+            docs: 'See README.md for API documentation'
+        }
+    });
+});
+
+// Start server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`🚀 Second Brain Server running on http://localhost:${PORT}`);
+    console.log(`📊 API available at http://localhost:${PORT}/api/brain`);
+    console.log(`💾 Storage: ${brainStorage.storagePath}`);
+    console.log(`🔐 Auth: ${process.env.API_KEY ? 'Enabled (API Key required)' : 'Disabled'}`);
+});
