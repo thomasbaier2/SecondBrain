@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Standalone Second Brain module for personal task and memory management",
   "main": "src/index.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
@@ -14,16 +14,24 @@
     "task-management",
     "memory",
     "personal-assistant",
-    "productivity"
+    "productivity",
+    "genkit",
+    "agent"
   ],
   "author": "Thomas Baier",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2"
+    "@genkit-ai/express": "^1.0.0",
+    "@genkit-ai/google-genai": "^1.0.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "genkit": "^1.0.0",
+    "lancedb": "^0.0.1",
+    "vectordb": "^0.21.2",
+    "zod": "^3.23.0"
   },
-  "devDependencies": {},
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",

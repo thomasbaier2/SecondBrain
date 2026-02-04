@@ -1,33 +1,21 @@
+# Local Brain Data
+data/
+
+# Environment Variables
+.env
+
 # Dependencies
 node_modules/
-package-lock.json
+dist/
 
-# Data storage
-data/
-*.json
-!package.json
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
+# System Files
 .DS_Store
 Thumbs.db
 
-# Build
-dist/
-build/
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Antigravity Brain (Artifacts)
+.gemini/

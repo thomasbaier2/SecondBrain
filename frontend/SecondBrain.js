@@ -15,7 +15,7 @@ export class SecondBrain {
         };
         this.api = new ApiClient(apiBase);
     }
-    
+
     /**
      * Initialize the module
      */
@@ -24,7 +24,7 @@ export class SecondBrain {
         await this.loadData();
         this.setupEventListeners();
     }
-    
+
     /**
      * Load brain data from API
      */
@@ -42,7 +42,7 @@ export class SecondBrain {
             this.showError('Fehler beim Laden der Daten.');
         }
     }
-    
+
     /**
      * Setup event listeners
      */
@@ -52,11 +52,11 @@ export class SecondBrain {
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.loadData());
         }
-        
+
         // Filters
         const statusFilter = document.getElementById('brain-filter-status');
         const priorityFilter = document.getElementById('brain-filter-priority');
-        
+
         if (statusFilter) {
             statusFilter.addEventListener('change', () => this.applyFilters());
         }
@@ -64,28 +64,28 @@ export class SecondBrain {
             priorityFilter.addEventListener('change', () => this.applyFilters());
         }
     }
-    
+
     /**
      * Apply filters and re-render
      */
     applyFilters() {
         const statusFilter = document.getElementById('brain-filter-status')?.value || 'all';
         const priorityFilter = document.getElementById('brain-filter-priority')?.value || 'all';
-        
+
         const filtered = this.data.tasks.filter(t => {
             const statusMap = { 'open': 'offen', 'completed': 'completed', 'deferred': 'in_progress' };
             const taskStatus = statusMap[t.status] || t.status || 'offen';
-            
+
             if (statusFilter !== 'all' && taskStatus !== statusFilter) return false;
             if (priorityFilter !== 'all' && (t.priority || 'medium') !== priorityFilter) return false;
-            
+
             return true;
         });
-        
+
         this.renderTasks(filtered);
         this.updateTaskCount(filtered.length, this.data.tasks.length);
     }
-    
+
     /**
      * Render the entire component
      */
@@ -95,14 +95,14 @@ export class SecondBrain {
         this.updateTaskCount(this.data.tasks.length, this.data.tasks.length);
         this.updateContextCount(this.data.contexts.length);
     }
-    
+
     /**
      * Render tasks list
      */
     renderTasks(tasks) {
         const container = document.getElementById('brain-tasks-container');
         if (!container) return;
-        
+
         if (!tasks.length) {
             container.innerHTML = `
                 <div class="brain-empty-state">
@@ -112,36 +112,36 @@ export class SecondBrain {
                 </div>`;
             return;
         }
-        
+
         container.innerHTML = tasks.map(t => this.renderTaskCard(t)).join('');
     }
-    
+
     /**
      * Render a single task card
      */
     renderTaskCard(task) {
-        const depsHtml = (task.dependencies && task.dependencies.length) 
-            ? `<div class="text-10 text-orange mt-4">🔗 Wartet auf: ${task.dependencies.join(', ')}</div>` 
+        const depsHtml = (task.dependencies && task.dependencies.length)
+            ? `<div class="text-10 text-orange mt-4">🔗 Wartet auf: ${task.dependencies.join(', ')}</div>`
             : '';
-        
+
         const proofHtml = task.proof
             ? `<div class="text-10 text-green mt-4">✅ Nachweis: ${task.proof}</div>`
             : '';
-        
+
         const typeLabel = task.type || 'aufgabe';
-        const durationText = (task.duration_h || task.duration_m) 
-            ? `${task.duration_h || 0}h ${task.duration_m || 0}m` 
+        const durationText = (task.duration_h || task.duration_m)
+            ? `${task.duration_h || 0}h ${task.duration_m || 0}m`
             : '';
-        
+
         const timeInfo = [];
         if (task.deadline_at) timeInfo.push(`🏁 Deadline: ${new Date(task.deadline_at).toLocaleString()}`);
         if (task.event_at) timeInfo.push(`🎭 Event: ${new Date(task.event_at).toLocaleString()}`);
         if (task.termin_at) timeInfo.push(`📅 Termin: ${new Date(task.termin_at).toLocaleString()}`);
         if (task.process_at) timeInfo.push(`⚙️ Bearbeitung: ${new Date(task.process_at).toLocaleString()}`);
-        
+
         const statusMap = { 'open': 'offen', 'completed': 'erledigt', 'deferred': 'in Bearbeitung' };
         const statusText = statusMap[task.status] || task.status || 'offen';
-        
+
         return `
             <div class="brain-item priority-${task.priority || 'medium'}">
                 <div class="flex justify-between items-start">
@@ -165,14 +165,14 @@ export class SecondBrain {
             </div>
         `;
     }
-    
+
     /**
      * Render contexts list
      */
     renderContexts(contexts) {
         const container = document.getElementById('brain-contexts-container');
         if (!container) return;
-        
+
         if (!contexts.length) {
             container.innerHTML = `
                 <div class="brain-empty-state">
@@ -182,7 +182,7 @@ export class SecondBrain {
                 </div>`;
             return;
         }
-        
+
         container.innerHTML = contexts.map(c => `
             <div class="brain-item">
                 <div class="text-12">${c.content}</div>
@@ -193,51 +193,66 @@ export class SecondBrain {
             </div>
         `).join('');
     }
-    
+
     /**
      * Update task count display
      */
     updateTaskCount(filtered, total) {
         const countEl = document.getElementById('brain-task-count');
         if (!countEl) return;
-        
+
         if (filtered === total) {
             countEl.textContent = `${total} Aufgaben`;
         } else {
             countEl.textContent = `${filtered} von ${total} Aufgaben`;
         }
     }
-    
+
     /**
      * Update context count display
      */
     updateContextCount(count) {
         const countEl = document.getElementById('brain-context-count');
         if (!countEl) return;
-        
+
         countEl.textContent = `${count} Einträge`;
     }
-    
+
     /**
      * Show error message
      */
     showError(message) {
         const taskContainer = document.getElementById('brain-tasks-container');
         const contextContainer = document.getElementById('brain-contexts-container');
-        
+
         const errorHtml = `
             <div class="brain-empty-state">
                 <div class="brain-empty-icon">⚠️</div>
                 <p class="m-0">${message}</p>
             </div>`;
-        
+
         if (taskContainer) taskContainer.innerHTML = errorHtml;
         if (contextContainer) contextContainer.innerHTML = errorHtml;
     }
-    
-    /**
-     * Set API base URL (for different environments)
-     */
+
+    async askSecretary(text) {
+        return this.api.post('/suggest', { text: text });
+    }
+
+    async addTask(task) {
+        try {
+            await this.api.post('/tasks', task);
+
+            // Optional: Also add context?
+            // await this.api.post('/contexts', { content: `Created task via AI: ${task.title}` });
+
+            return true;
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }
+
     setApiBase(url) {
         this.api = new ApiClient(url);
     }

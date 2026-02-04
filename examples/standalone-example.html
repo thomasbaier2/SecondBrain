@@ -1,145 +1,731 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Second Brain - Standalone Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sonia | AI Secretary</title>
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #007bff;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --bot-bg: #ffffff;
+            --user-bg: #007bff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            padding: 20px;
-            background: #f5f5f5;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: var(--text);
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+
         .header {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 16px 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            border-bottom: 1px solid #e2e8f0;
         }
-        .grid {
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+        }
+
+        #chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: #f1f5f9;
+        }
+
+        .message {
+            max-width: 88%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 15px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            animation: fadeIn 0.3s ease-out;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: var(--user-bg);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+        }
+
+        .message.bot {
+            background: var(--bot-bg);
+            color: #334155;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .message.system {
+            background: #e2e8f0;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 500;
+            align-self: center;
+            border-radius: 20px;
+            padding: 6px 14px;
+            box-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .message .meta {
+            font-size: 10px;
+            opacity: 0.5;
+            margin-top: 8px;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .input-area {
+            background: white;
+            padding: 20px 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+
+        #message-input {
+            flex: 1;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+            padding: 14px 24px;
+            font-size: 16px;
+            outline: none;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        #message-input:focus {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .btn-round {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-round:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-round:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tool-btn {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            font-size: 18px;
+        }
+
+        /* A2UI Cards */
+        .a2ui-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            margin-top: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            color: #1e293b;
+            width: 100%;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .a2ui-header {
+            background: #f8fafc;
+            padding: 12px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .a2ui-header span {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .a2ui-task-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .a2ui-task-item:last-child {
+            border-bottom: none;
+        }
+
+        .a2ui-task-item:hover {
+            background: #f8fafc;
+        }
+
+        .task-index {
+            width: 24px;
+            height: 24px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            flex-shrink: 0;
+            -webkit-appearance: none;
+            appearance: none;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .task-checkbox:checked {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+
+        .task-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            font-weight: 900;
+            left: 3px;
+            top: -1px;
+        }
+
+        .task-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-sub {
+            font-size: 10px;
+            color: #94a3b8;
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            font-weight: 500;
+            flex-wrap: wrap;
+        }
+
+        .a2ui-badge {
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 9px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .badge-score {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .badge-effort {
+            background: #fff1f2;
+            color: #f43f5e;
+        }
+
+        .badge-date {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .badge-time {
+            background: #fefce8;
+            color: #a16207;
+        }
+
+        .a2ui-btn-icon {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 10px;
+            color: #94a3b8;
+            transition: all 0.2s;
+        }
+
+        .a2ui-btn-icon:hover {
+            background: #ffeeee;
+            color: #ef4444;
+        }
+
+        /* Dashboard */
+        #dashboard-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8fafc;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        .close-dash {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .mode-tags {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0 32px 0;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+        }
+
+        #matrix-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            grid-template-rows: 1fr 1fr;
+            gap: 12px;
+            background: #f1f5f9;
+            padding: 12px;
+            width: 100%;
+            aspect-ratio: 1/1;
+            position: relative;
+            z-index: 10;
+            border-radius: 20px;
+            border: 2px solid #e2e8f0;
         }
-        .card {
+
+        .quadrant {
             background: white;
-            padding: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 10% 10%;
+        }
+
+        .quad-label {
+            position: absolute;
+            font-size: 10px;
+            font-weight: 800;
+            color: #94a3b8;
+            padding: 12px;
+            z-index: 11;
+            letter-spacing: 0.5px;
+            opacity: 0.6;
+        }
+
+        .q-do {
+            background-color: #fff9f9;
+            border: 2px solid #fee2e2;
+        }
+
+        .q-plan {
+            background-color: #f6fdf6;
+            border: 2px solid #dcfce7;
+        }
+
+        .q-delegate {
+            background-color: #f4faff;
+            border: 2px solid #e0f2fe;
+        }
+
+        .q-drop {
+            background-color: #fcfcfc;
+            border: 2px solid #f1f5f9;
+        }
+
+        .task-dot {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: move;
+            transform: translate(-50%, -50%);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+
+        .task-label {
+            position: absolute;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: 700;
+            color: #334155;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4px 8px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
-        .card h3 {
-            margin-bottom: 15px;
-        }
-        .btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn:hover {
-            background: #0056b3;
-        }
-        .item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        .item:last-child {
-            border-bottom: none;
+
+        #task-detail {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 32px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            z-index: 3000;
+            width: 90%;
+            max-width: 440px;
+            display: none;
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🧠 Second Brain - Standalone Example</h1>
-            <p>Dieses Beispiel zeigt, wie die Second Brain Frontend-Komponente verwendet wird.</p>
-            <button class="btn" onclick="loadData()">🔄 Aktualisieren</button>
+    <header class="header">
+        <h1>
+            <div class="status-dot"></div> Sonia Secretary
+        </h1>
+        <div class="mood-trigger" onclick="toggleMoods()">😊</div>
+    </header>
+    <div class="mood-panel" id="mood-panel"
+        style="position: absolute; top: 70px; right: 24px; background: white; padding: 12px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: none; flex-direction: column; gap: 6px; z-index: 1000; border: 1px solid #e2e8f0;">
+        <div onclick="setMood('neutral')"
+            style="padding: 10px 18px; cursor: pointer; border-radius: 10px; font-size: 14px; font-weight: 500;">😐
+            Neutral</div>
+        <div onclick="setMood('happy')"
+            style="padding: 10px 18px; cursor: pointer; border-radius: 10px; font-size: 14px; font-weight: 500;">😄
+            Motiviert</div>
+        <div onclick="setMood('annoyed')"
+            style="padding: 10px 18px; cursor: pointer; border-radius: 10px; font-size: 14px; font-weight: 500;">😡
+            Gestresst</div>
+    </div>
+    <main id="chat-history">
+        <div class="message bot">Guten Tag, Thomas. 👋 Ich bin Sonia. Wie kann ich dich heute unterstützen?<div
+                class="meta">System</div>
         </div>
-        
-        <div class="grid">
-            <div class="card">
-                <h3>✅ Aufgaben</h3>
-                <div id="tasks-container">Lade Aufgaben...</div>
+    </main>
+    <footer class="input-area">
+        <button class="btn-round tool-btn" title="Dashboard" onclick="toggleDashboard()">📊</button>
+        <button class="btn-round tool-btn" title="Morning Sync" onclick="morningSync()">🔄</button>
+        <input type="text" id="message-input" placeholder="Nachricht an Sonia..."
+            onkeypress="if(event.key==='Enter') sendMessage()">
+        <button class="btn-round send-btn" onclick="sendMessage()">➤</button>
+    </footer>
+    <div id="dashboard-overlay">
+        <div class="close-dash" onclick="toggleDashboard()">×</div>
+        <h2 style="font-size: 24px; font-weight: 700;">🎯 Eisenhower Matrix</h2>
+        <p style="font-size: 14px; color: #64748b; margin-top: 4px;">Dringend ist LINKS, Wichtig ist OBEN.</p>
+        <div class="mode-tags" id="mode-tags">
+            <div class="mode-btn active" data-time="all" onclick="setTimeFilter('all')">Alle</div>
+            <div class="mode-btn" data-time="today" onclick="setTimeFilter('today')">Heute</div>
+            <div class="mode-btn" data-time="week" onclick="setTimeFilter('week')">Woche</div>
+            <div class="mode-btn" data-time="month" onclick="setTimeFilter('month')">Monat</div>
+        </div>
+        <div id="matrix-container">
+            <div class="quadrant q-do"><span class="quad-label" style="top:0; left:0;">Q1 (TUN)</span></div>
+            <div class="quadrant q-plan"><span class="quad-label" style="top:0; right:0;">Q2 (PLANEN)</span></div>
+            <div class="quadrant q-delegate"><span class="quad-label" style="bottom:0; left:0;">Q3 (DELEGIEREN)</span>
             </div>
-            
-            <div class="card">
-                <h3>💡 Kontext</h3>
-                <div id="contexts-container">Lade Kontext...</div>
-            </div>
+            <div class="quadrant q-drop"><span class="quad-label" style="bottom:0; right:0;">Q4 (LÖSCHEN?)</span></div>
+            <div id="task-dots-layer" style="position: absolute; top:0; left:0; width:100%; height:100%;"></div>
+        </div>
+        <div style="margin-top: 40px;">
+            <h3
+                style="font-size: 18px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">
+                📋 Quick List</h3>
+            <div id="tasks-list" style="margin-top: 16px;">Lade...</div>
         </div>
     </div>
-
+    <div id="modal-overlay" onclick="closeModal()"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6); z-index: 2900; display: none; backdrop-filter: blur(4px);">
+    </div>
+    <div id="task-detail" class="message bot">
+        <h3 id="modal-title" style="font-size: 20px; font-weight: 700; color: #0f172a;"></h3>
+        <p id="modal-desc" style="font-size: 15px; margin: 16px 0; color: #475569;"></p>
+        <div id="modal-meta"
+            style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 13px; color: #64748b; line-height: 1.8;">
+        </div>
+        <button class="send-btn btn-round"
+            style="width: 100%; margin-top: 24px; border-radius: 12px; font-weight: 600; height: 52px;"
+            onclick="closeModal()">Fertig</button>
+    </div>
     <script type="module">
-        // Import the Second Brain module
         import { secondBrain } from '../frontend/SecondBrain.js';
-        
-        // Set API base URL (adjust to your server)
-        secondBrain.setApiBase('http://localhost:3001/api/brain');
-        
-        // Make it globally available
-        window.secondBrain = secondBrain;
-        
-        // Load data function
-        window.loadData = async () => {
-            try {
-                await secondBrain.loadData();
-                renderTasks();
-                renderContexts();
-            } catch (err) {
-                console.error('Failed to load data:', err);
-                document.getElementById('tasks-container').innerHTML = 
-                    '<p style="color: red;">Fehler beim Laden</p>';
+        secondBrain.setApiBase('/api/brain');
+        let currentMood = 'neutral'; let draggedTask = null; let currentTimeFilter = 'all';
+
+        window.addMessage = (text, type) => {
+            const h = document.getElementById('chat-history');
+            const d = document.createElement('div'); d.className = `message ${type}`;
+
+            let dt = text;
+            let payload = null;
+
+            // 1. Try standard JSON code block
+            const jm = text.match(/```(?:json|JSON)?\n?([\s\S]*?)```/);
+            if (jm) {
+                try {
+                    payload = JSON.parse(jm[1].trim());
+                    dt = text.replace(jm[0], '');
+                } catch (e) { }
             }
+
+            // 2. Fallback: Try to find raw JSON object if backticks are missing
+            if (!payload) {
+                const rawMatch = text.match(/(\{[\s\S]*\})/);
+                if (rawMatch) {
+                    try {
+                        const potential = JSON.parse(rawMatch[1].trim());
+                        if (potential.ui_type || potential.action) {
+                            payload = potential;
+                            dt = text.replace(rawMatch[1], '');
+                        }
+                    } catch (e) { }
+                }
+            }
+
+            // Clean up markers
+            dt = dt.replace(/```(?:json|JSON)?/gi, '').replace(/```/g, '').trim();
+            d.innerHTML = dt.replace(/\n/g, '<br>');
+
+            if (payload) {
+                if (payload.action === 'save_preference') handleLearnAction(payload);
+                else renderA2UICard(d, payload);
+            }
+
+            const m = document.createElement('div'); m.className = 'meta';
+            m.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            d.appendChild(m); h.appendChild(d); h.scrollTop = h.scrollHeight;
         };
-        
-        // Render functions (simplified)
-        function renderTasks() {
-            const container = document.getElementById('tasks-container');
-            const tasks = secondBrain.data.tasks || [];
-            
-            if (!tasks.length) {
-                container.innerHTML = '<p>Keine Aufgaben</p>';
-                return;
-            }
-            
-            container.innerHTML = tasks.map(t => `
-                <div class="item">
-                    <strong>${t.title || 'Aufgabe'}</strong>
-                    <p style="font-size: 12px; color: #666;">${t.description || ''}</p>
-                    <span style="font-size: 11px; color: #999;">${t.priority || 'medium'}</span>
-                </div>
-            `).join('');
+
+        async function handleLearnAction(pay) {
+            console.log('Sonia learns Preference:', pay);
+            try {
+                await fetch('/api/brain/preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: pay.key, value: pay.value })
+                });
+                addMessage(`Lerneffekt: ${pay.key} gemerkt! 🧠`, 'system');
+            } catch (e) { }
         }
-        
-        function renderContexts() {
-            const container = document.getElementById('contexts-container');
-            const contexts = secondBrain.data.contexts || [];
-            
-            if (!contexts.length) {
-                container.innerHTML = '<p>Kein Kontext</p>';
-                return;
+
+        function renderA2UICard(cont, pay) {
+            const card = document.createElement('div'); card.className = 'a2ui-card';
+            if (pay.ui_type === 'task_list') {
+                const header = pay.title || 'Fokus Aufgaben';
+                card.innerHTML = `<div class="a2ui-header"><span>${header}</span></div>`;
+                pay.data.forEach(t => {
+                    const i = document.createElement('div'); i.className = 'a2ui-task-item';
+                    i.innerHTML = `<div class="task-index">${t.index}</div><input type="checkbox" class="task-checkbox" ${t.status === 'completed' ? 'checked' : ''} onchange="completeTask('${t.id}', this.checked)"><div class="task-info"><div class="task-title">${t.title}</div><div class="task-sub"><span class="a2ui-badge badge-score">W:${t.importance || 5} D:${t.urgency || 5}</span>${t.effort ? `<span class="a2ui-badge badge-effort">⏱️ ${t.effort}m</span>` : ''}${t.date ? `<span class="a2ui-badge badge-date">📅 ${t.date}</span>` : ''}${t.time ? `<span class="a2ui-badge badge-time">🕒 ${t.time}</span>` : ''}</div></div><div class="a2ui-actions"><button class="a2ui-btn-icon" onclick="deleteTask('${t.id}')">🗑️</button></div>`;
+                    card.appendChild(i);
+                });
+            } else if (pay.ui_type === 'data_table' || pay.ui_type === 'routine_briefing') {
+                let h = `<div class="a2ui-header"><span>${pay.title || 'Briefing'}</span></div><div class="a2ui-table-container"><table class="a2ui-table"><thead><tr>`;
+                (pay.columns || []).forEach(c => h += `<th>${c}</th>`);
+                h += `</tr></thead><tbody>`;
+                (pay.rows || []).forEach(r => { h += `<tr>`; r.forEach(v => h += `<td>${v}</td>`); h += `</tr>`; });
+                h += `</tbody></table></div>`; card.innerHTML = h;
             }
-            
-            container.innerHTML = contexts.map(c => `
-                <div class="item">
-                    <p>${c.content || ''}</p>
-                    <span style="font-size: 11px; color: #999;">
-                        ${new Date(c.timestamp).toLocaleDateString()}
-                    </span>
-                </div>
-            `).join('');
+            cont.appendChild(card);
         }
-        
-        // Initial load
-        window.loadData();
+
+        window.sendMessage = async () => {
+            const i = document.getElementById('message-input'); const m = i.value.trim(); if (!m) return;
+            addMessage(m, 'user'); i.value = '';
+            try {
+                const r = await fetch('/api/brain/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: m, mood: currentMood }) });
+                const d = await r.json(); addMessage(d.text || '', 'bot');
+            } catch (e) { addMessage(`❌ Fehler: ${e.message}`, 'bot'); }
+        };
+
+        window.morningSync = async () => {
+            addMessage('Starte Morning Routine... 🌀', 'system');
+            try {
+                const r = await fetch('/api/brain/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Sonia, mach den Morning Sync (Gmail, Salesforce, MS Tasks).", mood: currentMood })
+                });
+                const d = await r.json(); addMessage(d.text || '', 'bot');
+            } catch (e) { }
+        }
+
+        window.toggleMoods = () => { const p = document.getElementById('mood-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; };
+        window.setMood = (m) => { currentMood = m; toggleMoods(); addMessage(`Modus: ${m}`, 'system'); };
+        window.toggleDashboard = async () => { const d = document.getElementById('dashboard-overlay'); const v = d.style.display === 'flex'; d.style.display = v ? 'none' : 'flex'; if (!v) await renderDashboard(); };
+        window.setTimeFilter = async (f) => { currentTimeFilter = f; document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.time === f)); await renderDashboard(); };
+        window.completeTask = async (id, c) => { await fetch(`/api/brain/tasks/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: c ? 'completed' : 'open' }) }); };
+        window.deleteTask = async (id) => { if (confirm('Löschen?')) await fetch(`/api/brain/tasks/${id}`, { method: 'DELETE' }); if (document.getElementById('dashboard-overlay').style.display === 'flex') renderDashboard(); };
+
+        async function renderDashboard() {
+            try {
+                const r = await fetch(`/api/brain/matrix?mode=${currentTimeFilter}`); const { matrix } = await r.json();
+                const l = document.getElementById('tasks-list'); const dy = document.getElementById('task-dots-layer');
+                l.innerHTML = ''; dy.innerHTML = '';
+                matrix.forEach(t => {
+                    const item = document.createElement('div'); item.style = "padding:14px; border-bottom:1px solid #f1f5f9; cursor:pointer;";
+                    item.innerHTML = `<b>${t.title}</b> <br> <small style="color:#94a3b8;">${t.task_type || 'task'} • W:${t.importance_score} D:${t.urgency_score}</small>`;
+                    item.onclick = () => showTaskDetail(t); l.appendChild(item);
+                    const x = (1 - (t.calculated_urgency / 10)) * 100; const y = (1 - (t.calculated_importance / 10)) * 100;
+                    const d = document.createElement('div'); d.className = 'task-dot'; d.style.left = `${x}%`; d.style.top = `${y}%`;
+                    const lbl = document.createElement('div'); lbl.className = 'task-label'; lbl.innerText = t.title.substring(0, 15); d.appendChild(lbl);
+                    d.onmousedown = (e) => startDrag(e, t, d); d.onclick = (e) => { e.stopPropagation(); showTaskDetail(t); }; dy.appendChild(d);
+                });
+            } catch (e) { }
+        }
+        function startDrag(e, t, el) { e.preventDefault(); draggedTask = { t, el }; el.style.zIndex = 1000; document.addEventListener('mousemove', onDrag); document.addEventListener('mouseup', stopDrag); }
+        function onDrag(e) {
+            if (!draggedTask) return; const rect = document.getElementById('matrix-container').getBoundingClientRect();
+            let x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+            let y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+            draggedTask.el.style.left = `${x}%`; draggedTask.el.style.top = `${y}%`;
+        }
+        async function stopDrag(e) {
+            if (!draggedTask) return; const rect = document.getElementById('matrix-container').getBoundingClientRect();
+            const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+            const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+            const u = Math.max(1, Math.min(10, Math.round((1 - (x / 100)) * 10)));
+            const i = Math.max(1, Math.min(10, Math.round((1 - (y / 100)) * 10)));
+            await fetch(`/api/brain/tasks/${draggedTask.t.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urgency_score: u, importance_score: i }) });
+            draggedTask = null; document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); renderDashboard();
+        }
+        window.showTaskDetail = (t) => { document.getElementById('modal-title').innerText = t.title; document.getElementById('modal-desc').innerText = t.description; document.getElementById('modal-meta').innerHTML = `<b>Typ:</b> ${t.task_type} <br><b>Aufwand:</b> ${t.estimated_effort_m} Min <br><b>Score:</b> W:${t.importance_score} / D:${t.urgency_score}`; document.getElementById('modal-overlay').style.display = 'block'; document.getElementById('task-detail').style.display = 'block'; };
+        window.closeModal = () => { document.getElementById('modal-overlay').style.display = 'none'; document.getElementById('task-detail').style.display = 'none'; };
     </script>
 </body>
+
 </html>

@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Second Brain Storage - Standalone Module
@@ -7,15 +7,15 @@ const path = require('path');
  * Independent storage implementation that can work without the Agent Framework.
  * Supports file-based storage with optional vector store integration.
  */
-class BrainStorage {
+export class BrainStorage {
     constructor(options = {}) {
         // Storage path configuration
         this.storagePath = options.storagePath || path.join(process.cwd(), 'data', 'brain');
         this.dataFile = path.join(this.storagePath, 'personal_brain.json');
-        
+
         // Optional vector store integration (can be injected)
         this.vectorStore = options.vectorStore || null;
-        
+
         // Initialize data structure
         this.data = {
             tasks: [],
@@ -23,14 +23,90 @@ class BrainStorage {
             graph: { nodes: [], edges: [] },
             preferences: {}
         };
-        
+
         // Ensure storage directory exists
         this.ensureStorageDir();
-        
+
         // Load existing data
         this.load();
+
+        // Default Work Mode
+        if (!this.data.preferences.current_work_mode) {
+            this.data.preferences.current_work_mode = 'neutral';
+        }
     }
-    
+
+    /**
+     * Get tasks for the highly granular Eisenhower Matrix
+     * Calculates scores dynamically based on logic/time.
+     */
+    getEisenhowerMatrix(options = {}) {
+        const now = new Date();
+        const { timeFilter } = options;
+
+        return this.data.tasks.map(task => {
+            let urgency = task.urgency_score || 5;
+            let importance = task.importance_score || 5;
+
+            // 1. Dynamic Urgency Growth
+            if (task.deadline_at) {
+                const deadline = new Date(task.deadline_at);
+                const diffMs = deadline - now;
+                const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+                if (diffDays < 0) {
+                    urgency = 10; // Overdue
+                } else if (diffDays < 1) {
+                    urgency = Math.min(10, urgency + 4);
+                } else if (diffDays < 3) {
+                    urgency = Math.min(10, urgency + 2);
+                }
+            }
+
+            // 2. Dependency Urgency Push
+            if (task.dependency_id) {
+                const parent = this.data.tasks.find(t => t.id === task.dependency_id);
+                if (parent && (parent.urgency_score > 7 || parent.is_calendar_event)) {
+                    urgency = Math.max(urgency, 8);
+                }
+            }
+
+            return {
+                ...task,
+                calculated_urgency: urgency,
+                calculated_importance: importance,
+                quadrant: this._getQuadrant(urgency, importance)
+            };
+        }).filter(t => {
+            if (!timeFilter || timeFilter === 'all') return true;
+
+            const deadline = t.deadline_at ? new Date(t.deadline_at) : null;
+            const diffDays = deadline ? (deadline - now) / (1000 * 60 * 60 * 24) : null;
+
+            if (timeFilter === 'today') {
+                // Today: Deadline < 1 day OR extremely urgent (8+)
+                return (deadline && diffDays < 1) || t.calculated_urgency >= 8;
+            }
+            if (timeFilter === 'week') {
+                // Week: Deadline < 7 days OR urgent (6+)
+                return (deadline && diffDays < 7) || t.calculated_urgency >= 6;
+            }
+            if (timeFilter === 'month') {
+                // Month: Deadline < 30 days
+                return (deadline && diffDays < 30) || t.calculated_urgency >= 4;
+            }
+
+            return true;
+        });
+    }
+
+    _getQuadrant(u, i) {
+        if (u >= 5 && i >= 5) return 'Q1'; // Urgent/Important
+        if (u < 5 && i >= 5) return 'Q2';  // Not Urgent/Important
+        if (u >= 5 && i < 5) return 'Q3';  // Urgent/Not Important
+        return 'Q4';                      // Neither
+    }
+
     /**
      * Ensure storage directory exists
      */
@@ -39,7 +115,7 @@ class BrainStorage {
             fs.mkdirSync(this.storagePath, { recursive: true });
         }
     }
-    
+
     /**
      * Load data from storage
      */
@@ -59,7 +135,7 @@ class BrainStorage {
             }
         }
     }
-    
+
     /**
      * Save data to storage
      */
@@ -73,7 +149,7 @@ class BrainStorage {
             return false;
         }
     }
-    
+
     /**
      * Store a structured task or information
      */
@@ -83,7 +159,7 @@ class BrainStorage {
             ...item,
             timestamp: new Date().toISOString()
         };
-        
+
         if (type === 'task') {
             // Auto-detect type if not provided
             if (!entry.type) {
@@ -92,10 +168,10 @@ class BrainStorage {
             // Set defaults
             if (!entry.status) entry.status = 'open';
             if (!entry.priority) entry.priority = 'medium';
-            
+
             this.data.tasks.push(entry);
             this.save();
-            
+
             // Optional: Store in vector store for semantic search
             if (this.vectorStore && entry.description) {
                 await this._indexInVectorStore(entry, 'task');
@@ -103,7 +179,7 @@ class BrainStorage {
         } else if (type === 'context') {
             this.data.contexts.push(entry);
             this.save();
-            
+
             // Optional: Store in vector store
             if (this.vectorStore && entry.content) {
                 await this._indexInVectorStore(entry, 'context');
@@ -118,10 +194,32 @@ class BrainStorage {
             this.save();
             return { id: item.key, ...this.data.preferences[item.key] };
         }
-        
+
         return entry;
     }
-    
+
+    /**
+     * Get all behavioral preferences
+     */
+    getPreferences() {
+        const prefs = [];
+        for (const [key, val] of Object.entries(this.data.preferences || {})) {
+            if (typeof val === 'object' && val.value) {
+                prefs.push(`${key}: ${val.value}`);
+            } else if (typeof val === 'string') {
+                prefs.push(`${key}: ${val}`);
+            }
+        }
+        return prefs;
+    }
+
+    /**
+     * Add a task (Convenience wrapper)
+     */
+    async addTask(task) {
+        return this.storeItem('task', task);
+    }
+
     /**
      * Update an existing item
      */
@@ -129,30 +227,30 @@ class BrainStorage {
         const list = type === 'task' ? this.data.tasks : this.data.contexts;
         const idx = list.findIndex(i => i.id === id);
         if (idx === -1) return false;
-        
+
         list[idx] = { ...list[idx], ...updates, updated_at: new Date().toISOString() };
         this.save();
-        
+
         // Optional: Update vector store
         if (this.vectorStore) {
             await this._indexInVectorStore(list[idx], type);
         }
-        
+
         return true;
     }
-    
+
     /**
      * Delete an item
      */
     async deleteItem(type, id) {
         const initialLen = type === 'task' ? this.data.tasks.length : this.data.contexts.length;
-        
+
         if (type === 'task') {
             this.data.tasks = this.data.tasks.filter(i => i.id !== id);
         } else {
             this.data.contexts = this.data.contexts.filter(i => i.id !== id);
         }
-        
+
         const success = (type === 'task' ? this.data.tasks.length : this.data.contexts.length) < initialLen;
         if (success) {
             this.save();
@@ -162,10 +260,10 @@ class BrainStorage {
                 // This is a placeholder for future enhancement
             }
         }
-        
+
         return success;
     }
-    
+
     /**
      * Get all tasks with filters
      */
@@ -177,22 +275,22 @@ class BrainStorage {
             return true;
         });
     }
-    
+
     /**
      * Get all contexts
      */
     getContexts(filters = {}) {
         let contexts = [...this.data.contexts];
-        
+
         if (filters.tags && filters.tags.length > 0) {
-            contexts = contexts.filter(c => 
+            contexts = contexts.filter(c =>
                 c.tags && c.tags.some(tag => filters.tags.includes(tag))
             );
         }
-        
+
         return contexts;
     }
-    
+
     /**
      * Semantic search (requires vector store)
      */
@@ -201,7 +299,7 @@ class BrainStorage {
             // Fallback to simple text search
             return this._simpleTextSearch(query, options);
         }
-        
+
         try {
             const results = await this.vectorStore.search(query, {
                 targetPartitions: ['brain'],
@@ -214,14 +312,14 @@ class BrainStorage {
             return this._simpleTextSearch(query, options);
         }
     }
-    
+
     /**
      * Simple text-based search fallback
      */
     _simpleTextSearch(query, options = {}) {
         const searchTerm = query.toLowerCase();
         const results = [];
-        
+
         // Search in tasks
         this.data.tasks.forEach(task => {
             const text = `${task.title || ''} ${task.description || ''}`.toLowerCase();
@@ -235,7 +333,7 @@ class BrainStorage {
                 });
             }
         });
-        
+
         // Search in contexts
         this.data.contexts.forEach(context => {
             const text = (context.content || '').toLowerCase();
@@ -249,21 +347,21 @@ class BrainStorage {
                 });
             }
         });
-        
+
         return results.slice(0, options.limit || 10);
     }
-    
+
     /**
      * Refresh urgency based on process_at
      */
     refreshUrgency() {
         const now = new Date().getTime();
         let changed = false;
-        
+
         this.data.tasks.forEach(task => {
             if (task.status === 'completed') return;
             if (!task.process_at) return;
-            
+
             const processTime = new Date(task.process_at).getTime();
             if (now >= processTime) {
                 if (task.priority !== 'urgent' && task.priority !== 'high') {
@@ -272,55 +370,55 @@ class BrainStorage {
                 }
             }
         });
-        
+
         if (changed) {
             this.save();
         }
-        
+
         return changed;
     }
-    
+
     /**
      * Get user preferences
      */
     getUserPreferences() {
         return this.data.preferences || {};
     }
-    
+
     /**
      * Generate unique ID
      */
     generateId() {
         return Date.now().toString() + Math.random().toString(36).substring(7);
     }
-    
+
     /**
      * Auto-detect task type
      */
     _autoDetectType(task) {
         if (task.termin_at) return 'termin';
         if (task.event_at) return 'event';
-        
+
         const totalMinutes = (task.duration_h || 0) * 60 + (task.duration_m || 0);
         if (totalMinutes > 0 && totalMinutes < 10) return 'todo';
         if (totalMinutes >= 10) return 'aufgabe';
-        
+
         return 'aufgabe';
     }
-    
+
     /**
      * Index item in vector store (optional)
      */
     async _indexInVectorStore(item, type) {
         if (!this.vectorStore) return;
-        
+
         try {
-            const text = type === 'task' 
+            const text = type === 'task'
                 ? `${item.title || ''} ${item.description || ''}`.trim()
                 : (item.content || '').trim();
-            
+
             if (!text) return;
-            
+
             await this.vectorStore.addMemory(text, {
                 type: `brain_${type}`,
                 brainId: item.id,
@@ -332,4 +430,5 @@ class BrainStorage {
     }
 }
 
-module.exports = BrainStorage;
+
+export default BrainStorage;

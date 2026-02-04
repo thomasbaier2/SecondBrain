@@ -1,4 +1,4 @@
-const express = require('express');
+import express from 'express';
 
 /**
  * Second Brain API Routes - Standalone Module
@@ -6,12 +6,12 @@ const express = require('express');
  * Independent Express routes that can be mounted in any Express app.
  * No dependencies on Agent Framework.
  */
-function createBrainRoutes(brainStorage, options = {}) {
+export function createBrainRoutes(brainStorage, options = {}) {
     const router = express.Router();
-    
+
     // Optional auth middleware (can be injected)
     const authMiddleware = options.authMiddleware || ((req, res, next) => next());
-    
+
     /**
      * GET /api/brain
      * Fetch all brain data (tasks, contexts, graph)
@@ -20,14 +20,14 @@ function createBrainRoutes(brainStorage, options = {}) {
         try {
             // Refresh urgency before returning
             brainStorage.refreshUrgency();
-            
+
             const tasks = brainStorage.data.tasks || [];
             const contexts = brainStorage.data.contexts || [];
             const graph = brainStorage.data.graph || { nodes: [], edges: [] };
-            
-            res.json({ 
-                tasks, 
-                contexts, 
+
+            res.json({
+                tasks,
+                contexts,
                 graph,
                 preferences: brainStorage.getUserPreferences()
             });
@@ -36,7 +36,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * GET /api/brain/tasks
      * Get tasks with optional filters
@@ -48,14 +48,29 @@ function createBrainRoutes(brainStorage, options = {}) {
                 priority: req.query.priority || 'all',
                 category: req.query.category || 'all'
             };
-            
+
             const tasks = brainStorage.getTasks(filters);
             res.json({ tasks, count: tasks.length });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
+    /**
+     * GET /api/brain/matrix
+     * Get highly granular Eisenhower Matrix
+     */
+    router.get('/matrix', authMiddleware, async (req, res) => {
+        try {
+            const matrix = brainStorage.getEisenhowerMatrix({
+                filterMode: req.query.mode || brainStorage.data.preferences.current_work_mode
+            });
+            res.json({ matrix, count: matrix.length });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     /**
      * GET /api/brain/contexts
      * Get contexts with optional filters
@@ -65,14 +80,14 @@ function createBrainRoutes(brainStorage, options = {}) {
             const filters = {
                 tags: req.query.tags ? req.query.tags.split(',') : []
             };
-            
+
             const contexts = brainStorage.getContexts(filters);
             res.json({ contexts, count: contexts.length });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * POST /api/brain/tasks
      * Create a new task
@@ -85,7 +100,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * PUT /api/brain/tasks/:id
      * Update an existing task
@@ -102,7 +117,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * DELETE /api/brain/tasks/:id
      * Delete a task
@@ -119,7 +134,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * POST /api/brain/contexts
      * Create a new context entry
@@ -132,7 +147,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * DELETE /api/brain/contexts/:id
      * Delete a context entry
@@ -149,7 +164,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * POST /api/brain/query
      * Semantic search in brain data
@@ -160,14 +175,14 @@ function createBrainRoutes(brainStorage, options = {}) {
             if (!query) {
                 return res.status(400).json({ error: 'Query parameter required' });
             }
-            
+
             const results = await brainStorage.query(query, { limit, threshold });
             res.json({ results, count: results.length });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * GET /api/brain/preferences
      * Get user preferences
@@ -180,7 +195,7 @@ function createBrainRoutes(brainStorage, options = {}) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     /**
      * POST /api/brain/preferences
      * Update user preferences
@@ -191,19 +206,19 @@ function createBrainRoutes(brainStorage, options = {}) {
             if (!key || value === undefined) {
                 return res.status(400).json({ error: 'key and value required' });
             }
-            
-            const preference = await brainStorage.storeItem('preference', { 
-                key, 
-                value, 
-                confidence 
+
+            const preference = await brainStorage.storeItem('preference', {
+                key,
+                value,
+                confidence
             });
             res.json({ success: true, preference });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
     });
-    
+
     return router;
 }
 
-module.exports = createBrainRoutes;
+// module.exports = createBrainRoutes;

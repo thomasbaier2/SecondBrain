@@ -1,5 +1,5 @@
-const BrainStorage = require('./storage/BrainStorage');
-const createBrainRoutes = require('./api/routes');
+import BrainStorage from './storage/BrainStorage.js';
+import { createBrainRoutes } from './api/routes.js';
 
 /**
  * Second Brain Module - Standalone Package
@@ -8,7 +8,7 @@ const createBrainRoutes = require('./api/routes');
  * 
  * Usage:
  * ```javascript
- * const { BrainStorage, createBrainRoutes } = require('./src');
+ * import { BrainStorage, createBrainRoutes } from './src/index.js';
  * 
  * // Create storage instance
  * const brainStorage = new BrainStorage({
@@ -25,7 +25,7 @@ const createBrainRoutes = require('./api/routes');
  * app.use('/api/brain', brainRoutes);
  * ```
  */
-module.exports = {
+export {
     BrainStorage,
     createBrainRoutes
 };
