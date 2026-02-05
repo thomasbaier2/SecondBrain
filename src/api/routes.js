@@ -9,6 +9,10 @@ import express from 'express';
 export function createBrainRoutes(brainStorage, options = {}) {
     const router = express.Router();
 
+    // Domain Agents
+    const gmailAgent = options.gmailAgent;
+    const orchestrator = options.orchestrator;
+
     // Optional auth middleware (can be injected)
     const authMiddleware = options.authMiddleware || ((req, res, next) => next());
 
@@ -213,6 +217,49 @@ export function createBrainRoutes(brainStorage, options = {}) {
                 confidence
             });
             res.json({ success: true, preference });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    /**
+     * GET /api/auth/google/login
+     * Start Gmail OAuth Flow
+     */
+    router.get('/auth/google/login', async (req, res) => {
+        try {
+            if (!gmailAgent) return res.status(500).json({ error: 'Gmail Agent not initialized' });
+            const { url } = await gmailAgent.run({ action: 'get_auth_url' });
+            res.redirect(url);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    /**
+     * GET /api/auth/google/callback
+     * Receive code and save tokens
+     */
+    router.get('/auth/google/callback', async (req, res) => {
+        try {
+            if (!gmailAgent) return res.status(500).json({ error: 'Gmail Agent not initialized' });
+            const { code } = req.query;
+            await gmailAgent.handleCallback(code);
+            res.send('<h1>Authentifizierung erfolgreich!</h1><p>Du kannst dieses Fenster jetzt schließen und Sonia bitten, deine Mails zu synchronisieren.</p>');
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    /**
+     * POST /api/brain/sync
+     * Trigger global sync via Orchestrator
+     */
+    router.post('/sync', authMiddleware, async (req, res) => {
+        try {
+            if (!orchestrator) return res.status(500).json({ error: 'Orchestrator not initialized' });
+            const result = await orchestrator.processRequest({ message: 'sync everything' });
+            res.json(result);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

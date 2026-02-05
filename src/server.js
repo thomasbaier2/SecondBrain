@@ -8,6 +8,8 @@
 import 'dotenv/config';
 import express from 'express';
 import { BrainStorage, createBrainRoutes } from './index.js';
+import Orchestrator from './genkit/orchestrator/Orchestrator.js';
+import GmailAgent from './genkit/agents/GmailAgent.js';
 
 // Create Express app
 const app = express();
@@ -48,9 +50,18 @@ const brainStorage = new BrainStorage({
     // vectorStore: null // Optional: Add vector store for semantic search
 });
 
+// Initialize Domain Agents & Orchestrator
+const gmailAgent = new GmailAgent(brainStorage);
+const orchestrator = new Orchestrator(brainStorage);
+
+// Register Agents in Orchestrator
+orchestrator.registerAgent('gmail', gmailAgent);
+
 // Create and mount routes
 const brainRoutes = createBrainRoutes(brainStorage, {
-    authMiddleware: authMiddleware
+    authMiddleware: authMiddleware,
+    gmailAgent: gmailAgent,
+    orchestrator: orchestrator
 });
 
 app.use('/api/brain', brainRoutes);
