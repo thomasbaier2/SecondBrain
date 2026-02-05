@@ -41,7 +41,8 @@ export class Orchestrator {
             agentTasks.push(this._runAgent('salesforce', { action: 'sync_opportunities' }, session, results));
         }
         if (analysis.domains.includes('ms_graph')) {
-            agentTasks.push(this._runAgent('ms_graph', { action: 'sync_calendar' }, session, results));
+            const msAction = analysis.isSyncRequest ? 'basic_review' : (analysis.intents.calendar ? 'get_calendar' : 'get_tasks');
+            agentTasks.push(this._runAgent('ms_graph', { action: msAction, days: 7 }, session, results));
         }
 
         await Promise.all(agentTasks);
@@ -85,32 +86,68 @@ export class Orchestrator {
     async _analyzeIntent(text) {
         const msg = text.toLowerCase();
         const domains = [];
+        const intents = {
+            calendar: msg.includes('termin') || msg.includes('kalender') || msg.includes('meeting'),
+            tasks: msg.includes('aufgabe') || msg.includes('todo') || msg.includes('tasks'),
+            mail: msg.includes('mail') || msg.includes('gmail') || msg.includes('email')
+        };
 
-        if (msg.includes('mail') || msg.includes('gmail') || msg.includes('sync') || msg.includes('eisenhauer')) domains.push('gmail');
+        if (intents.mail || msg.includes('sync') || msg.includes('eisenhauer')) domains.push('gmail');
         if (msg.includes('salesforce') || msg.includes('sf') || msg.includes('opp')) domains.push('salesforce');
-        if (msg.includes('termin') || msg.includes('kalender') || msg.includes('ms') || msg.includes('microsoft')) domains.push('ms_graph');
+        if (intents.calendar || intents.tasks || msg.includes('ms') || msg.includes('microsoft')) domains.push('ms_graph');
 
         return {
             domains,
-            isSyncRequest: msg.includes('sync') || msg.includes('routine') || msg.includes('morgen')
+            intents,
+            isSyncRequest: msg.includes('sync') || msg.includes('routine') || msg.includes('morgen') || msg.includes('review')
         };
     }
 
     async _synthesizeResponse(input, results, session) {
-        // Check if we have gmail mail review results
-        if (results.gmail && results.gmail.mails) {
+        let text = "";
+        let ui_payload = null;
+
+        // 1. Check for MS Graph Auth Error (Device Code login needed)
+        if (results.ms_graph && results.ms_graph.error && results.ms_graph.error.includes('MS Graph not authenticated')) {
             return {
-                text: results.gmail.summary || `Hier sind deine ${results.gmail.count} neuesten Mails:`,
+                text: "Ich brauche Zugriff auf dein Microsoft-Konto für Kalender und Aufgaben. Bitte melde dich hier an:",
+                ui_type: 'auth_redirect',
+                url: '/api/brain/auth/microsoft/login',
+                button_text: 'Mit Microsoft anmelden'
+            };
+        }
+
+        // 2. Synthesize Gmail results
+        if (results.gmail && results.gmail.mails) {
+            text += results.gmail.summary || `Ich habe ${results.gmail.count} Mails gefunden. `;
+            ui_payload = {
                 ui_type: 'mail_list',
-                title: '📧 Mail Review (14 Tage)',
+                title: '📧 Mail Review',
                 count: results.gmail.count,
                 mails: results.gmail.mails
             };
         }
 
-        // Default response for other agent results
+        // 3. Synthesize MS Graph results
+        if (results.ms_graph) {
+            if (results.ms_graph.events) {
+                text += `Du hast ${results.ms_graph.count} anstehende Termine. `;
+            }
+            if (results.ms_graph.tasks) {
+                text += `Es gibt ${results.ms_graph.count} offene Aufgaben in MS To-Do. `;
+            }
+            if (results.ms_graph.summary) {
+                text += results.ms_graph.summary;
+            }
+        }
+
+        if (!text) {
+            text = "Ich habe die Analyse abgeschlossen und die entsprechenden Cluster abgefragt.";
+        }
+
         return {
-            text: "Ich habe die Analyse abgeschlossen und die entsprechenden Cluster abgefragt.",
+            text: text.trim(),
+            ui: ui_payload,
             details: results
         };
     }

@@ -11,6 +11,7 @@ export function createBrainRoutes(brainStorage, options = {}) {
 
     // Domain Agents
     const gmailAgent = options.gmailAgent;
+    const msGraphAgent = options.msGraphAgent;
     const orchestrator = options.orchestrator;
 
     // Optional auth middleware (can be injected)
@@ -272,6 +273,31 @@ export function createBrainRoutes(brainStorage, options = {}) {
             const { code } = req.query;
             await gmailAgent.handleCallback(code);
             res.send('<h1>Authentifizierung erfolgreich!</h1><p>Du kannst dieses Fenster jetzt schließen und Sonia bitten, deine Mails zu synchronisieren.</p>');
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    /**
+     * GET /api/auth/microsoft/login
+     * Start Microsoft Graph Device Code Flow
+     */
+    router.get('/auth/microsoft/login', async (req, res) => {
+        try {
+            if (!msGraphAgent) return res.status(500).json({ error: 'MS Graph Agent not initialized' });
+            const result = await msGraphAgent.run({ action: 'get_auth_url' });
+
+            // Return landing page with code and instructions
+            res.send(`
+                <div style="font-family: sans-serif; padding: 40px; text-align: center; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                    <h1 style="color: #0078d4;">Microsoft Login</h1>
+                    <p>Öffne den folgenden Link in einem neuen Tab:</p>
+                    <p><a href="${result.url}" target="_blank" style="font-size: 18px; color: #0078d4; font-weight: bold;">${result.url}</a></p>
+                    <p>Gib dort diesen Code ein:</p>
+                    <div style="background: #f4f4f4; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 10px; margin: 20px 0;">${result.code}</div>
+                    <p style="color: #666; font-size: 14px;">Nach der Eingabe kannst du dieses Fenster schließen. Sonia wird dann Zugriff auf deinen Kalender und deine Aufgaben haben.</p>
+                </div>
+            `);
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

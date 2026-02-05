@@ -10,6 +10,7 @@ import express from 'express';
 import { BrainStorage, createBrainRoutes } from './index.js';
 import Orchestrator from './genkit/orchestrator/Orchestrator.js';
 import GmailAgent from './genkit/agents/GmailAgent.js';
+import MsGraphAgent from './genkit/agents/MsGraphAgent.js';
 
 // Create Express app
 const app = express();
@@ -52,15 +53,18 @@ const brainStorage = new BrainStorage({
 
 // Initialize Domain Agents & Orchestrator
 const gmailAgent = new GmailAgent(brainStorage);
+const msGraphAgent = new MsGraphAgent(brainStorage);
 const orchestrator = new Orchestrator(brainStorage);
 
 // Register Agents in Orchestrator
 orchestrator.registerAgent('gmail', gmailAgent);
+orchestrator.registerAgent('ms_graph', msGraphAgent);
 
 // Create and mount routes
 const brainRoutes = createBrainRoutes(brainStorage, {
     authMiddleware: authMiddleware,
     gmailAgent: gmailAgent,
+    msGraphAgent: msGraphAgent,
     orchestrator: orchestrator
 });
 
