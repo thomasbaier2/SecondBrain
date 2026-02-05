@@ -386,9 +386,11 @@
         .mode-tags {
             display: flex;
             gap: 12px;
-            margin: 20px 0 32px 0;
+            margin: 20px 0 24px 0;
             overflow-x: auto;
             padding-bottom: 8px;
+            flex-shrink: 0;
+            /* Verhindert, dass Filter durch die Matrix gestaucht werden */
         }
 
         .mode-btn {
@@ -419,6 +421,10 @@
             background: #f1f5f9;
             padding: 12px;
             width: 100%;
+            max-width: 600px;
+            /* Begrenzt die Größe auf großen Bildschirmen */
+            margin: 0 auto;
+            /* Zentriert die Matrix */
             aspect-ratio: 1/1;
             position: relative;
             z-index: 10;

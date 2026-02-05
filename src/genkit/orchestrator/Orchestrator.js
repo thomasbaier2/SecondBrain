@@ -42,11 +42,20 @@ export class Orchestrator {
         }
         if (analysis.domains.includes('ms_graph')) {
             let msAction = 'get_calendar';
-            if (analysis.isSyncRequest) msAction = 'basic_review';
-            else if (analysis.intents.tasks) msAction = 'get_tasks';
-            else if (analysis.intents.mail) msAction = 'get_mails';
+            let details = null;
 
-            agentTasks.push(this._runAgent('ms_graph', { action: msAction, days: 7 }, session, results));
+            if (analysis.intents.create && analysis.appointmentDetails) {
+                msAction = 'create_event';
+                details = analysis.appointmentDetails;
+            } else if (analysis.isSyncRequest) {
+                msAction = 'basic_review';
+            } else if (analysis.intents.tasks) {
+                msAction = 'get_tasks';
+            } else if (analysis.intents.mail) {
+                msAction = 'get_mails';
+            }
+
+            agentTasks.push(this._runAgent('ms_graph', { action: msAction, days: 7, details }, session, results));
         }
 
         await Promise.all(agentTasks);
@@ -93,16 +102,23 @@ export class Orchestrator {
         const intents = {
             calendar: msg.includes('termin') || msg.includes('kalender') || msg.includes('meeting'),
             tasks: msg.includes('aufgabe') || msg.includes('todo') || msg.includes('tasks'),
-            mail: msg.includes('mail') || msg.includes('gmail') || msg.includes('email')
+            mail: msg.includes('mail') || msg.includes('gmail') || msg.includes('email'),
+            create: msg.includes('lege') || msg.includes('erstellen') || msg.includes('neu') || msg.includes('planen') || msg.includes('eintragen')
         };
 
         if (intents.mail || msg.includes('sync') || msg.includes('eisenhauer')) domains.push('gmail');
         if (msg.includes('salesforce') || msg.includes('sf') || msg.includes('opp')) domains.push('salesforce');
         if (intents.calendar || intents.tasks || msg.includes('ms') || msg.includes('microsoft') || msg.includes('sync')) domains.push('ms_graph');
 
+        let appointmentDetails = null;
+        if (intents.calendar && intents.create) {
+            appointmentDetails = await this._extractAppointmentDetails(text);
+        }
+
         return {
             domains,
             intents,
+            appointmentDetails,
             isSyncRequest: msg.includes('sync') || msg.includes('routine') || msg.includes('morgen') || msg.includes('review')
         };
     }
@@ -129,14 +145,17 @@ export class Orchestrator {
 
         // 2. Aggregate Mails (Gmail + Outlook)
         const allMails = [];
-        const mailResults = [];
-        if (results.gmail?.success && results.gmail.data?.mails) mailResults.push(...results.gmail.data.mails);
-        if (results.ms_graph?.success && results.ms_graph.data?.mails) mailResults.push(...results.ms_graph.data.mails);
 
-        // Also check for legacy or direct access for backward compatibility during transition
-        if (results.gmail?.mails) allMails.push(...results.gmail.mails);
-        if (results.ms_graph?.mails) allMails.push(...results.ms_graph.mails);
-        allMails.push(...mailResults);
+        // Helper to extract mails from various agent result shapes
+        const extractMails = (res) => {
+            if (!res?.success || !res.data) return [];
+            if (Array.isArray(res.data.mails)) return res.data.mails;
+            if (res.data.mails && Array.isArray(res.data.mails.mails)) return res.data.mails.mails;
+            return [];
+        };
+
+        allMails.push(...extractMails(results.gmail));
+        allMails.push(...extractMails(results.ms_graph));
 
         if (allMails.length > 0) {
             allMails.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -154,14 +173,14 @@ export class Orchestrator {
             const sections = [];
 
             // MS Graph Data (Calendar & Tasks)
-            const ms = results.ms_graph || {};
-            const calendarEvents = ms.calendar?.events || ms.events;
-            const msTasks = ms.tasks?.tasks || ms.tasks;
+            const ms = results.ms_graph?.data || {};
+            const calendarEvents = ms.calendar?.events || ms.events || [];
+            const msTasks = ms.tasks?.tasks || ms.tasks || [];
 
-            if (calendarEvents?.length) {
+            if (calendarEvents.length > 0) {
                 sections.push({ title: 'Anstehende Termine', type: 'calendar', data: calendarEvents });
             }
-            if (msTasks?.length) {
+            if (msTasks.length > 0) {
                 sections.push({ title: 'Deine Aufgaben', type: 'tasks', data: msTasks });
             }
             if (allMails.length > 0) {
@@ -170,6 +189,13 @@ export class Orchestrator {
 
             if (sections.length > 0) {
                 text = "Guten Morgen! Hier ist dein aktueller Überblick für heute:";
+
+                // Add LLM Analysis for the mails if they exist
+                if (allMails.length > 0) {
+                    const analysisText = await this._analyzeMailContent(allMails);
+                    text += "\n\n" + analysisText;
+                }
+
                 ui_payload = {
                     ui_type: 'routine_briefing',
                     title: '🌅 Dein Morgen-Briefing',
@@ -224,6 +250,55 @@ export class Orchestrator {
             text: finalOutput,
             details: results
         };
+    }
+
+    /**
+     * Internal helper to extract appointment details via LLM
+     */
+    async _extractAppointmentDetails(text) {
+        try {
+            const { output } = await ai.generate({
+                prompt: `Extrahiere Termindetails aus dieser Nachricht: "${text}". 
+                Heute ist der ${new Date().toISOString()}.
+                Gib ein JSON Objekt zurück mit: subject (String), start (ISO String), end (ISO String, optional), location (String, optional), description (String, optional).
+                Antworte NUR mit dem JSON Objekt.`,
+                output: {
+                    schema: z.object({
+                        subject: z.string(),
+                        start: z.string(),
+                        end: z.string().optional(),
+                        location: z.string().optional(),
+                        description: z.string().optional()
+                    })
+                }
+            });
+            return output;
+        } catch (e) {
+            console.error('[Orchestrator] Extraction failed:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Internal helper to summarize mail content using LLM
+     */
+    async _analyzeMailContent(mails) {
+        if (!mails || mails.length === 0) return "Keine neuen Nachrichten zur Analyse.";
+
+        try {
+            const mailSummaryInput = mails.slice(0, 10).map(m => `Von: ${m.from}\nBetreff: ${m.subject}\nInhalt: ${m.snippet}`).join('\n---\n');
+            const { text } = await ai.generate({
+                prompt: `Du bist Sonia, eine professionelle Assistentin. Analysiere diese Liste von E-Mails und fasse die wichtigsten 3-5 Punkte kurz zusammen. 
+                Priorisiere Anfragen von Kunden oder dringende Termine. Antworte kurz und prägnant in Du-Form.
+                
+                E-Mails:
+                ${mailSummaryInput}`,
+            });
+            return text;
+        } catch (e) {
+            console.error('[Orchestrator] Mail analysis failed:', e);
+            return "Ich konnte die E-Mails zwar abrufen, aber die Zusammenfassung ist fehlgeschlagen.";
+        }
     }
 }
 

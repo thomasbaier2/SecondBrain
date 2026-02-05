@@ -13,7 +13,7 @@ export class GmailAgent extends AgentBase {
     /**
      * Get the active auth client (OAuth2 for personal accounts)
      */
-    async getAuth() {
+    async asyncGetAuth() {
         const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
@@ -23,10 +23,30 @@ export class GmailAgent extends AgentBase {
         const tokens = this.storage.data.preferences?.gmail_tokens?.value;
         if (tokens) {
             oauth2Client.setCredentials(tokens);
+
+            // Listen for token updates (automatic refresh)
+            oauth2Client.on('tokens', async (newTokens) => {
+                const currentTokens = this.storage.data.preferences?.gmail_tokens?.value || {};
+                const combinedTokens = { ...currentTokens, ...newTokens };
+
+                await this.storage.storeItem('preference', {
+                    key: 'gmail_tokens',
+                    value: combinedTokens
+                });
+                this._log('tokens_refreshed', 'Automatically updated and saved Gmail tokens');
+            });
+
             return oauth2Client;
         }
 
         return null;
+    }
+
+    /**
+     * Backward compatible wrapper (sync-ish calling)
+     */
+    async getAuth() {
+        return this.asyncGetAuth();
     }
 
     /**

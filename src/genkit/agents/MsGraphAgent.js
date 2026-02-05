@@ -99,6 +99,9 @@ export class MsGraphAgent extends AgentBase {
                 case 'basic_review':
                     resultData = await this.basicReview(client, task.days || 14);
                     break;
+                case 'create_event':
+                    resultData = await this.createCalendarEvent(client, task.details);
+                    break;
                 default:
                     return this.error(`Unknown action: ${task.action}`);
             }
@@ -107,6 +110,45 @@ export class MsGraphAgent extends AgentBase {
             this._log('run_error', e.message, 'error');
             return this.error(e.message);
         }
+    }
+
+    /**
+     * Create a calendar event
+     */
+    async createCalendarEvent(client, details) {
+        if (!details || !details.subject || !details.start) {
+            throw new Error('Fehlende Details für die Terminerstellung (Betreff, Startzeit).');
+        }
+
+        const event = {
+            subject: details.subject,
+            body: {
+                contentType: 'HTML',
+                content: details.description || '',
+            },
+            start: {
+                dateTime: details.start,
+                timeZone: 'Europe/Berlin',
+            },
+            end: {
+                dateTime: details.end || details.start, // Fallback to start if no end
+                timeZone: 'Europe/Berlin',
+            },
+            location: {
+                displayName: details.location || '',
+            },
+            isOnlineMeeting: details.isOnline || false,
+        };
+
+        const result = await client.api('/me/events').post(event);
+
+        this._log('event_created', { id: result.id });
+        return {
+            success: true,
+            event_id: result.id,
+            webLink: result.webLink,
+            summary: `Termin "${details.subject}" am ${new Date(details.start).toLocaleString()} wurde angelegt.`
+        };
     }
 
     /**
