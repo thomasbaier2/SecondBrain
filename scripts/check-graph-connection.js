@@ -54,10 +54,13 @@ async function checkConnection() {
             const lists = listsRes.value || [];
             console.log(`   Verfügbare Listen (${lists.length}): ${lists.map(l => l.displayName).join(', ')}`);
 
+            console.log('   >>> Starte getToDoTasks...');
             const tasks = await agent.getToDoTasks(client);
+            console.log(`   >>> getToDoTasks fertig. Ergebnis-Typ: ${typeof tasks}`);
             console.log(`   Erfolg: ${tasks.count} Aufgaben gefunden in Standard-Liste.`);
         } catch (taskErr) {
             console.error('❌ Fehler in To-do-API:', taskErr.message);
+            console.error(taskErr);
         }
 
         // Test Mail

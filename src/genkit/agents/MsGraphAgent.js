@@ -229,16 +229,28 @@ export class MsGraphAgent extends AgentBase {
      * Get To-Do tasks
      */
     async getToDoTasks(client) {
-        // Get default list
+        // Get all lists
         const listsRes = await client.api('/me/todo/lists').get();
         const lists = listsRes.value || [];
-        const defaultList = lists.find(l => l.wellKnownName === 'defaultList') || lists[0];
 
-        if (!defaultList) {
+        // Strategy: 1. wellKnownName default, 2. DisplayName match, 3. Non-empty list, 4. First list
+        let targetList = lists.find(l => l.wellKnownName === 'defaultList');
+
+        if (!targetList) {
+            targetList = lists.find(l => l.displayName === 'Aufgaben' || l.displayName === 'Tasks');
+        }
+
+        if (!targetList) {
+            targetList = lists[0];
+        }
+
+        if (!targetList) {
             return { count: 0, tasks: [], message: 'Keine To-Do Liste gefunden.' };
         }
 
-        const tasksRes = await client.api(`/me/todo/lists/${defaultList.id}/tasks`)
+        this._log('tasks_list_selected', { name: targetList.displayName, id: targetList.id });
+
+        const tasksRes = await client.api(`/me/todo/lists/${targetList.id}/tasks`)
             .filter("status ne 'completed'")
             .select('title,status,dueDateTime,importance')
             .top(20)

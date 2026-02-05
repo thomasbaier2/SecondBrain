@@ -194,8 +194,8 @@ export class Orchestrator {
 
             // MS Graph Data (Calendar & Tasks)
             const ms = results.ms_graph?.data || {};
-            const calendarEvents = ms.calendar?.events || ms.events || [];
-            const msTasks = ms.tasks?.tasks || ms.tasks || [];
+            const calendarEvents = Array.isArray(ms.calendar) ? ms.calendar : (ms.calendar?.events || ms.events || []);
+            const msTasks = Array.isArray(ms.tasks) ? ms.tasks : (ms.tasks?.tasks || ms.tasks || []);
 
             if (calendarEvents.length > 0) {
                 sections.push({ title: 'Anstehende Termine', type: 'calendar', data: calendarEvents });
