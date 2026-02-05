@@ -141,11 +141,16 @@ export class Orchestrator {
         if (input.message.toLowerCase().includes('sync') || input.message.toLowerCase().includes('morgen') || input.message.toLowerCase().includes('routine')) {
             const sections = [];
 
-            if (results.ms_graph?.events?.length) {
-                sections.push({ title: 'Anstehende Termine', type: 'calendar', data: results.ms_graph.events });
+            // MS Graph Data (Calendar & Tasks)
+            const ms = results.ms_graph || {};
+            const calendarEvents = ms.calendar?.events || ms.events;
+            const msTasks = ms.tasks?.tasks || ms.tasks;
+
+            if (calendarEvents?.length) {
+                sections.push({ title: 'Anstehende Termine', type: 'calendar', data: calendarEvents });
             }
-            if (results.ms_graph?.tasks?.length) {
-                sections.push({ title: 'Deine Aufgaben', type: 'tasks', data: results.ms_graph.tasks });
+            if (msTasks?.length) {
+                sections.push({ title: 'Deine Aufgaben', type: 'tasks', data: msTasks });
             }
             if (allMails.length > 0) {
                 sections.push({ title: 'Neue Nachrichten', type: 'mails', data: allMails });
@@ -161,35 +166,32 @@ export class Orchestrator {
             }
         }
 
-        // 3. Synthesize MS Graph results (Calendar & Tasks)
-        if (results.ms_graph) {
-            if (results.ms_graph.events) {
-                text += `Du hast ${results.ms_graph.events.length || results.ms_graph.count} anstehende Termine. `;
+        // 3. Fallback Synthesize (if not a routine sync)
+        if (results.ms_graph && !ui_payload) {
+            const ms = results.ms_graph;
+            const events = ms.calendar?.events || ms.events;
+            const tasks = ms.tasks?.tasks || ms.tasks;
+
+            if (events) {
+                text += `Du hast ${events.length} anstehende Termine. `;
+                ui_payload = {
+                    ui_type: 'calendar_list',
+                    title: '📅 Kalender (Anstehend)',
+                    events: events
+                };
+            }
+            if (tasks) {
+                text += `Es gibt ${tasks.length} offene Aufgaben. `;
                 if (!ui_payload) {
                     ui_payload = {
-                        ui_type: 'calendar_list',
-                        title: '📅 Kalender (Anstehend)',
-                        events: results.ms_graph.events
+                        ui_type: 'task_list_v2',
+                        title: '✅ Offene Aufgaben',
+                        data: tasks
                     };
                 }
             }
-            if (results.ms_graph.tasks) {
-                const openCount = results.ms_graph.tasks.length || results.ms_graph.count;
-                text += `Es gibt ${openCount} offene Aufgaben in MS To-Do. `;
-                if (!ui_payload || ui_payload.ui_type === 'calendar_list') {
-                    // If we already have a payload, maybe merge or just keep the first?
-                    // Usually the user asks for one specific thing.
-                    if (!ui_payload) {
-                        ui_payload = {
-                            ui_type: 'task_list_v2',
-                            title: '✅ MS To-Do Aufgaben',
-                            data: results.ms_graph.tasks
-                        };
-                    }
-                }
-            }
-            if (results.ms_graph.summary && !allMails.length && !results.ms_graph.events && !results.ms_graph.tasks) {
-                text += results.ms_graph.summary;
+            if (ms.summary && !allMails.length && !events && !tasks) {
+                text += ms.summary;
             }
         }
 
