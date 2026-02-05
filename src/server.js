@@ -96,6 +96,15 @@ import { chatWithSecretary } from './genkit/flows/chat.js';
 
 app.post('/api/brain/chat', async (req, res) => {
     try {
+        const msg = (req.body.message || '').toLowerCase();
+
+        // Route mail/gmail requests through Orchestrator for proper UI
+        if (msg.includes('mail') || msg.includes('gmail') || msg.includes('review')) {
+            const result = await orchestrator.processRequest(req.body);
+            return res.json(result);
+        }
+
+        // Default: use chatWithSecretary for general chat
         const result = await chatWithSecretary(req.body);
         res.json(result);
     } catch (e) {
