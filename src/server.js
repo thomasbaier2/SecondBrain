@@ -181,10 +181,12 @@ app.get('/api/admin/check-graph', async (req, res) => {
     if (req.query.secret !== process.env.DEPLOY_SECRET) return res.status(401).send('Unauthorized');
 
     try {
-        const result = await execSync('node scripts/check-graph-connection.js', { encoding: 'utf8' });
+        const result = await execSync('node scripts/check-graph-connection.js 2>&1', { encoding: 'utf8' });
         res.type('text/plain').send(result);
     } catch (err) {
-        res.status(500).type('text/plain').send(err.stdout || err.message);
+        // If execSync throws (non-zero exit), err.stdout contains the output so far
+        const output = (err.stdout || '') + '\nFAILED: ' + (err.stderr || err.message);
+        res.status(500).type('text/plain').send(output);
     }
 });
 

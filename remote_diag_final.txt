@@ -12,14 +12,15 @@
 
 📡 Teste API-Verbindung...
 📅 Rufe Kalender ab...
-   Query: 2026-02-05T20:33:59.171Z - 2026-02-12T20:33:59.171Z
+   Query: 2026-02-05T20:35:30.319Z - 2026-02-12T20:35:30.319Z
    Erfolg: 6 Termine gefunden.
 
 ✅ Rufe To-dos ab...
    Verfügbare Listen (3): Aufgaben, Co-Experten Programm, Flagged Emails
+   >>> Starte getToDoTasks...
 
 📧 Rufe Outlook-Mails ab...
-   Query: newer than 2026-01-29T20:33:59.596Z
+   Query: newer than 2026-01-29T20:35:30.930Z
    Erfolg: 20 Mails gefunden.
 
 ✨ Diagnose abgeschlossen.
