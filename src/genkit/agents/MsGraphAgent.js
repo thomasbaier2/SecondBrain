@@ -4,7 +4,7 @@ import AgentBase from './AgentBase.js';
 import fs from 'fs';
 import path from 'path';
 
-const DELEGATED_SCOPES = ["User.Read", "Calendars.Read", "Calendars.ReadWrite", "Tasks.ReadWrite"];
+const DELEGATED_SCOPES = ["User.Read", "Calendars.Read", "Calendars.ReadWrite", "Tasks.ReadWrite", "Mail.Read"];
 const TOKEN_FILE = './data/brain/ms_graph_token.json';
 
 /**
@@ -80,8 +80,10 @@ export class MsGraphAgent extends AgentBase {
                 return this.getCalendarEvents(client, task.days || 7);
             case 'get_tasks':
                 return this.getToDoTasks(client);
+            case 'get_mails':
+                return this.getMails(client, task.days || 14);
             case 'basic_review':
-                return this.basicReview(client, task.days || 7);
+                return this.basicReview(client, task.days || 14);
             default:
                 throw new Error(`Unknown action: ${task.action}`);
         }
@@ -191,16 +193,45 @@ export class MsGraphAgent extends AgentBase {
     }
 
     /**
-     * Basic review: Calendar + Tasks combined
+     * Get Mails for the last N days
      */
-    async basicReview(client, days = 7) {
+    async getMails(client, days = 14) {
+        const date = new Date();
+        date.setDate(date.getDate() - days);
+        const dateString = date.toISOString();
+
+        const result = await client.api('/me/messages')
+            .filter(`receivedDateTime ge ${dateString}`)
+            .select('id,subject,from,receivedDateTime,bodyPreview')
+            .orderby('receivedDateTime desc')
+            .top(20)
+            .get();
+
+        const mails = (result.value || []).map(m => ({
+            id: m.id,
+            subject: m.subject,
+            from: m.from?.emailAddress?.name || m.from?.emailAddress?.address || 'Unbekannt',
+            date: m.receivedDateTime,
+            snippet: m.bodyPreview,
+        }));
+
+        this._log('mails_fetched', { count: mails.length });
+        return { count: mails.length, mails };
+    }
+
+    /**
+     * Basic review: Calendar + Tasks + Mails combined
+     */
+    async basicReview(client, days = 14) {
         const calendar = await this.getCalendarEvents(client, days);
         const tasks = await this.getToDoTasks(client);
+        const mails = await this.getMails(client, days);
 
         return {
-            summary: `📅 ${calendar.count} Termine in ${days} Tagen | ✅ ${tasks.count} offene Aufgaben`,
+            summary: `📅 ${calendar.count} Termine | ✅ ${tasks.count} Aufgaben | 📧 ${mails.count} Outlook Mails`,
             calendar,
             tasks,
+            mails,
         };
     }
 

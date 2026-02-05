@@ -41,7 +41,11 @@ export class Orchestrator {
             agentTasks.push(this._runAgent('salesforce', { action: 'sync_opportunities' }, session, results));
         }
         if (analysis.domains.includes('ms_graph')) {
-            const msAction = analysis.isSyncRequest ? 'basic_review' : (analysis.intents.calendar ? 'get_calendar' : 'get_tasks');
+            let msAction = 'get_calendar';
+            if (analysis.isSyncRequest) msAction = 'basic_review';
+            else if (analysis.intents.tasks) msAction = 'get_tasks';
+            else if (analysis.intents.mail) msAction = 'get_mails';
+
             agentTasks.push(this._runAgent('ms_graph', { action: msAction, days: 7 }, session, results));
         }
 
@@ -117,26 +121,31 @@ export class Orchestrator {
             };
         }
 
-        // 2. Synthesize Gmail results
-        if (results.gmail && results.gmail.mails) {
-            text += results.gmail.summary || `Ich habe ${results.gmail.count} Mails gefunden. `;
+        // 2. Synthesize Mail results (Gmail + Outlook)
+        const allMails = [];
+        if (results.gmail && results.gmail.mails) allMails.push(...results.gmail.mails);
+        if (results.ms_graph && results.ms_graph.mails) allMails.push(...results.ms_graph.mails);
+
+        if (allMails.length > 0) {
+            allMails.sort((a, b) => new Date(b.date) - new Date(a.date));
+            text += `Ich habe insgesamt ${allMails.length} Mails gefunden. `;
             ui_payload = {
                 ui_type: 'mail_list',
-                title: '📧 Mail Review',
-                count: results.gmail.count,
-                mails: results.gmail.mails
+                title: '📧 Mail Review (Gmail & Outlook)',
+                count: allMails.length,
+                mails: allMails
             };
         }
 
-        // 3. Synthesize MS Graph results
+        // 3. Synthesize MS Graph results (Calendar & Tasks)
         if (results.ms_graph) {
             if (results.ms_graph.events) {
-                text += `Du hast ${results.ms_graph.count} anstehende Termine. `;
+                text += `Du hast ${results.ms_graph.events.length || results.ms_graph.count} anstehende Termine. `;
             }
             if (results.ms_graph.tasks) {
-                text += `Es gibt ${results.ms_graph.count} offene Aufgaben in MS To-Do. `;
+                text += `Es gibt ${results.ms_graph.tasks.length || results.ms_graph.count} offene Aufgaben in MS To-Do. `;
             }
-            if (results.ms_graph.summary) {
+            if (results.ms_graph.summary && !allMails.length) {
                 text += results.ms_graph.summary;
             }
         }
