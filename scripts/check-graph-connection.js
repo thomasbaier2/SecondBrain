@@ -37,26 +37,34 @@ async function checkConnection() {
 
         // Test Calendar
         console.log('📅 Rufe Kalender ab...');
-        const calendar = await agent.getCalendarEvents(client, 1);
+        const now = new Date();
+        const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Test 7 days
+        console.log(`   Query: ${now.toISOString()} - ${end.toISOString()}`);
+        const calendar = await agent.getCalendarEvents(client, 7);
         console.log(`   Erfolg: ${calendar.count} Termine gefunden.`);
 
         // Test Tasks
-        console.log('✅ Rufe To-dos ab...');
+        console.log('\n✅ Rufe To-dos ab...');
+        const listsRes = await client.api('/me/todo/lists').get();
+        const lists = listsRes.value || [];
+        console.log(`   Verfügbare Listen (${lists.length}): ${lists.map(l => l.displayName).join(', ')}`);
+
         const tasks = await agent.getToDoTasks(client);
-        console.log(`   Erfolg: ${tasks.count} Aufgaben gefunden.`);
+        console.log(`   Erfolg: ${tasks.count} Aufgaben gefunden in Standard-Liste.`);
 
         // Test Mail
-        console.log('📧 Rufe Outlook-Mails ab...');
-        const mails = await agent.getMails(client, 1);
+        console.log('\n📧 Rufe Outlook-Mails ab...');
+        const mailDate = new Date();
+        mailDate.setDate(mailDate.getDate() - 7);
+        console.log(`   Query: newer than ${mailDate.toISOString()}`);
+        const mails = await agent.getMails(client, 7);
         console.log(`   Erfolg: ${mails.count} Mails gefunden.`);
 
-        console.log('\n✨ Diagnose abgeschlossen. Die Brücke steht!');
+        console.log('\n✨ Diagnose abgeschlossen.');
     } catch (e) {
-        console.error('\n❌ API-FEHLER während der Diagnose:');
+        console.error('\n❌ API-FEHLER:');
         console.error(e.message);
-        if (e.message.includes('403')) {
-            console.log('👉 Berechtigungsfehler (Scopes). Prüfe die Azure App Registration.');
-        }
+        if (e.body) console.error('Response Body:', e.body);
     }
 }
 
