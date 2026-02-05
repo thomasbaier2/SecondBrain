@@ -161,6 +161,13 @@ export class Orchestrator {
         allMails.push(...extractMails(results.gmail));
         allMails.push(...extractMails(results.ms_graph));
 
+        console.log('[Orchestrator] Data Aggregation:', {
+            gmailMails: extractMails(results.gmail).length,
+            outlookMails: extractMails(results.ms_graph).length,
+            hasMsGraph: !!results.ms_graph?.data,
+            msGraphStatus: results.ms_graph?.success ? 'success' : (results.ms_graph?.error || 'failed')
+        });
+
         if (allMails.length > 0) {
             allMails.sort((a, b) => new Date(b.date) - new Date(a.date));
             text += `Ich habe ${allMails.length} neue Nachrichten gefunden. `;
@@ -212,7 +219,14 @@ export class Orchestrator {
                     text += "\n\nIch habe deine Postfächer geprüft: Es gibt aktuell keine neuen ungelesenen Nachrichten für dich.";
                 }
             } else {
-                text += "\n\nEs ist alles ruhig! Ich konnte keine anstehenden Termine, offenen Aufgaben oder neuen Mails finden. Genieß deinen entspannten Tag! 🦾";
+                // Check if there was an error that caused empty results
+                const hasError = Object.values(results).some(r => r.success === false && !r.auth_required);
+                if (hasError) {
+                    const errors = Object.keys(results).filter(k => results[k].success === false && !results[k].auth_required);
+                    text += `\n\nIch konnte heute leider nicht alle Daten abrufen (Fehler bei: ${errors.join(', ')}). Bitte versuche es später noch einmal oder prüfe die Server-Logs. 🛡️`;
+                } else {
+                    text += "\n\nEs ist alles ruhig! Ich konnte keine anstehenden Termine, offenen Aufgaben oder neuen Mails finden. Genieß deinen entspannten Tag! 🦾";
+                }
             }
 
             ui_payload = {
@@ -224,12 +238,12 @@ export class Orchestrator {
         }
 
         // 3. Fallback Synthesize (if not a routine sync)
-        if (results.ms_graph && (!ui_payload || ui_payload.ui_type !== 'routine_briefing')) {
-            const ms = results.ms_graph;
+        if (results.ms_graph?.data && (!ui_payload || ui_payload.ui_type !== 'routine_briefing')) {
+            const ms = results.ms_graph.data;
             const events = ms.calendar?.events || ms.events;
             const tasks = ms.tasks?.tasks || ms.tasks;
 
-            if (events) {
+            if (events && Array.isArray(events)) {
                 text += `Du hast ${events.length} anstehende Termine. `;
                 if (!ui_payload) {
                     ui_payload = {
@@ -239,7 +253,7 @@ export class Orchestrator {
                     };
                 }
             }
-            if (tasks) {
+            if (tasks && Array.isArray(tasks)) {
                 text += `Es gibt ${tasks.length} offene Aufgaben. `;
                 if (!ui_payload) {
                     ui_payload = {

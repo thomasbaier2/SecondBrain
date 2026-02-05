@@ -25,8 +25,11 @@ async function simulateDaily() {
         }
     };
 
-    console.log('--- SIMULATING MORNING SYNC REQUEST ---');
-    const input = { message: 'Guten Morgen Sonia, mach mal einen Sync' };
+    console.log('--- SIMULATING WEEKLY REVIEW REQUEST ---');
+    const input = { message: 'zeig mir die ganze woche' };
+
+    const analysis = await orchestrator._analyzeIntent(input.message);
+    console.log('Analysis isSyncRequest:', analysis.isSyncRequest);
 
     // We bypass the actual execution and go straight to synthesis for the demo
     const response = await orchestrator._synthesizeResponse(input, mockResults, session);
