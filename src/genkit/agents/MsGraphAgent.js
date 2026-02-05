@@ -15,13 +15,21 @@ export class MsGraphAgent extends AgentBase {
     constructor(storage) {
         super('ms_graph', storage);
 
+        const tenantId = (process.env.AZURE_TENANT_ID || '').trim();
         this.config = {
             auth: {
                 clientId: (process.env.AZURE_CLIENT_ID || '').trim(),
-                authority: `https://login.microsoftonline.com/${(process.env.AZURE_TENANT_ID || '').trim()}`,
+                authority: `https://login.microsoftonline.com/${tenantId || 'common'}`,
                 clientSecret: (process.env.AZURE_CLIENT_SECRET || '').trim(),
             }
         };
+
+        console.log('[MsGraph] Agent Context:', {
+            hasClientId: !!this.config.auth.clientId,
+            clientIdMask: this.config.auth.clientId ? (this.config.auth.clientId.substring(0, 5) + '...') : 'N/A',
+            authority: this.config.auth.authority,
+            hasClientSecret: !!this.config.auth.clientSecret
+        });
 
         this.pca = new msal.PublicClientApplication({
             auth: {
@@ -96,7 +104,7 @@ export class MsGraphAgent extends AgentBase {
         return new Promise((resolve, reject) => {
             const deviceCodeRequest = {
                 deviceCodeCallback: (response) => {
-                    console.log('[MsGraph] Device Code Response:', response);
+                    console.log('[MsGraph] Device Code Raw Response:', JSON.stringify(response, null, 2));
                     this._log('device_code', { code: response.userCode, url: response.verificationUri || response.verificationUrl });
                     resolve({
                         code: response.userCode,
@@ -107,6 +115,7 @@ export class MsGraphAgent extends AgentBase {
                 scopes: [...DELEGATED_SCOPES, 'offline_access'],
             };
 
+            console.log('[MsGraph] Invoking acquireTokenByDeviceCode...');
             this.pca.acquireTokenByDeviceCode(deviceCodeRequest)
                 .then((response) => {
                     const tokenData = {
