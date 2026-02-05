@@ -111,24 +111,32 @@ export class Orchestrator {
         let text = "";
         let ui_payload = null;
 
-        // 1. Check for MS Graph Auth Requirement
-        const msResult = results.ms_graph || {};
-        if (msResult.error && (msResult.error.includes('authenticated') || msResult.error.includes('login'))) {
-            return {
-                text: "Ich brauche Zugriff auf dein Microsoft-Konto, um deinen Kalender und deine Aufgaben zu sehen. Bitte klicke hier zum Anmelden:",
-                ui_payload: {
-                    ui_type: 'auth_redirect',
-                    url: '/api/brain/auth/microsoft/login',
-                    button_text: 'Mit Microsoft anmelden',
-                    text: 'Microsoft Konto für Kalender & Tasks verbinden'
-                }
-            };
+        // 1. Check for Auth Requirement (Prioritize this!)
+        for (const domain in results) {
+            const res = results[domain];
+            if (res.auth_required) {
+                return {
+                    text: res.error || `Sonia braucht Zugriff auf dein ${domain}-Konto. Bitte klicke hier zum Anmelden:`,
+                    ui_payload: {
+                        ui_type: 'auth_redirect',
+                        url: domain === 'gmail' ? '/api/brain/auth/google/login' : '/api/brain/auth/microsoft/login',
+                        button_text: 'Jetzt anmelden',
+                        text: res.error || 'Authentifizierung erforderlich'
+                    }
+                };
+            }
         }
 
         // 2. Aggregate Mails (Gmail + Outlook)
         const allMails = [];
-        if (results.gmail && results.gmail.mails) allMails.push(...results.gmail.mails);
-        if (msResult.mails) allMails.push(...msResult.mails);
+        const mailResults = [];
+        if (results.gmail?.success && results.gmail.data?.mails) mailResults.push(...results.gmail.data.mails);
+        if (results.ms_graph?.success && results.ms_graph.data?.mails) mailResults.push(...results.ms_graph.data.mails);
+
+        // Also check for legacy or direct access for backward compatibility during transition
+        if (results.gmail?.mails) allMails.push(...results.gmail.mails);
+        if (results.ms_graph?.mails) allMails.push(...results.ms_graph.mails);
+        allMails.push(...mailResults);
 
         if (allMails.length > 0) {
             allMails.sort((a, b) => new Date(b.date) - new Date(a.date));

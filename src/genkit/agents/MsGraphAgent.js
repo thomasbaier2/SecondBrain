@@ -74,26 +74,38 @@ export class MsGraphAgent extends AgentBase {
     async run(task) {
         this._log('run_start', task);
 
-        if (task.action === 'get_auth_url') {
-            return this.startDeviceCodeFlow();
-        }
+        try {
+            if (task.action === 'get_auth_url') {
+                const urlData = await this.startDeviceCodeFlow();
+                return this.success(urlData);
+            }
 
-        const client = await this.getAuth();
-        if (!client) {
-            throw new Error('MS Graph not authenticated. Please visit /api/brain/auth/microsoft/login');
-        }
+            const client = await this.getAuth();
+            if (!client) {
+                return this.authRequired('Sonia braucht Zugriff auf dein Microsoft-Konto für Kalender und Aufgaben.');
+            }
 
-        switch (task.action) {
-            case 'get_calendar':
-                return this.getCalendarEvents(client, task.days || 7);
-            case 'get_tasks':
-                return this.getToDoTasks(client);
-            case 'get_mails':
-                return this.getMails(client, task.days || 14);
-            case 'basic_review':
-                return this.basicReview(client, task.days || 14);
-            default:
-                throw new Error(`Unknown action: ${task.action}`);
+            let resultData;
+            switch (task.action) {
+                case 'get_calendar':
+                    resultData = await this.getCalendarEvents(client, task.days || 7);
+                    break;
+                case 'get_tasks':
+                    resultData = await this.getToDoTasks(client);
+                    break;
+                case 'get_mails':
+                    resultData = await this.getMails(client, task.days || 14);
+                    break;
+                case 'basic_review':
+                    resultData = await this.basicReview(client, task.days || 14);
+                    break;
+                default:
+                    return this.error(`Unknown action: ${task.action}`);
+            }
+            return this.success(resultData);
+        } catch (e) {
+            this._log('run_error', e.message, 'error');
+            return this.error(e.message);
         }
     }
 

@@ -35,22 +35,32 @@ export class GmailAgent extends AgentBase {
     async run(task) {
         this._log('run_start', task);
 
-        if (task.action === 'get_auth_url') {
-            return this.getAuthUrl();
-        }
+        try {
+            if (task.action === 'get_auth_url') {
+                const urlData = await this.getAuthUrl();
+                return this.success(urlData);
+            }
 
-        const auth = await this.getAuth();
-        if (!auth) {
-            throw new Error('Gmail not authenticated. Please visit /api/auth/google/login');
-        }
+            const auth = await this.getAuth();
+            if (!auth) {
+                return this.authRequired('Sonia braucht Zugriff auf dein Gmail-Konto für die E-Mail-Synchronisation.');
+            }
 
-        switch (task.action) {
-            case 'sync_eisenhauer':
-                return this.syncEisenhauerMails(auth);
-            case 'basic_review':
-                return this.basicReview(auth, task.days || 14);
-            default:
-                throw new Error(`Unknown action: ${task.action}`);
+            let resultData;
+            switch (task.action) {
+                case 'sync_eisenhauer':
+                    resultData = await this.syncEisenhauerMails(auth);
+                    break;
+                case 'basic_review':
+                    resultData = await this.basicReview(auth, task.days || 14);
+                    break;
+                default:
+                    return this.error(`Unknown action: ${task.action}`);
+            }
+            return this.success(resultData);
+        } catch (e) {
+            this._log('run_error', e.message, 'error');
+            return this.error(e.message);
         }
     }
 

@@ -29,12 +29,33 @@ export class AgentBase {
     }
 
     /**
+     * Standard success result
+     */
+    success(data = null, ui_payload = null) {
+        return { success: true, data, ui_payload, error: null, auth_required: false };
+    }
+
+    /**
+     * Standard error result
+     */
+    error(message) {
+        return { success: false, data: null, ui_payload: null, error: message, auth_required: false };
+    }
+
+    /**
+     * Standard auth_required result
+     */
+    authRequired(message = 'Authentication required') {
+        return { success: false, data: null, ui_payload: { ui_type: 'auth_redirect' }, error: message, auth_required: true };
+    }
+
+    /**
      * Verification Guard
-     * Checks if the result meets a basic quality/policy gate.
+     * Checks if the result meets the standard contract.
      */
     async verify(result) {
-        // Base implementation: just check if result exists
-        return !!result;
+        if (!result || typeof result !== 'object') return false;
+        return 'success' in result && 'auth_required' in result;
     }
 }
 
