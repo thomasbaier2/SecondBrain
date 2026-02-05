@@ -144,6 +144,37 @@ app.get('/health', (req, res) => {
     });
 });
 
+// --- AUTO-DEPLOY WEBHOOK ---
+import { exec } from 'child_process';
+import crypto from 'crypto';
+
+app.post('/api/deploy', (req, res) => {
+    const secret = process.env.DEPLOY_SECRET;
+
+    // Verify GitHub signature if secret is set
+    if (secret) {
+        const signature = req.headers['x-hub-signature-256'];
+        const hmac = crypto.createHmac('sha256', secret);
+        const digest = 'sha256=' + hmac.update(JSON.stringify(req.body)).digest('hex');
+
+        if (signature !== digest) {
+            console.log('[Deploy] Invalid signature');
+            return res.status(401).json({ error: 'Invalid signature' });
+        }
+    }
+
+    console.log('[Deploy] Webhook received, pulling latest code...');
+
+    exec('git pull origin master && pm2 restart tb-assistant', { cwd: process.cwd() }, (error, stdout, stderr) => {
+        if (error) {
+            console.error('[Deploy] Error:', error.message);
+            return res.status(500).json({ error: error.message });
+        }
+        console.log('[Deploy] Success:', stdout);
+        res.json({ success: true, output: stdout });
+    });
+});
+
 // Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
