@@ -103,7 +103,7 @@ app.post('/api/brain/chat', async (req, res) => {
         const msg = (req.body.message || '').toLowerCase();
 
         // Route mail/gmail/sync requests through Orchestrator for proper UI
-        if (msg.includes('mail') || msg.includes('gmail') || msg.includes('review') || msg.includes('sync') || msg.includes('morgen') || msg.includes('routine')) {
+        if (msg.includes('mail') || msg.includes('gmail') || msg.includes('review') || msg.includes('sync') || msg.includes('morgen') || msg.includes('routine') || msg.includes('heute') || msg.includes('anstehend') || msg.includes(' an ') || msg.includes('plan')) {
             const result = await orchestrator.processRequest(req.body);
             return res.json(result);
         }

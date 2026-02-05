@@ -111,27 +111,31 @@ export class Orchestrator {
         let text = "";
         let ui_payload = null;
 
-        // 1. Check for MS Graph Auth Error (Device Code login needed)
-        if (results.ms_graph && results.ms_graph.error && results.ms_graph.error.includes('MS Graph not authenticated')) {
+        // 1. Check for MS Graph Auth Requirement
+        const msResult = results.ms_graph || {};
+        if (msResult.error && (msResult.error.includes('authenticated') || msResult.error.includes('login'))) {
             return {
-                text: "Ich brauche Zugriff auf dein Microsoft-Konto für Kalender und Aufgaben. Bitte melde dich hier an:",
-                ui_type: 'auth_redirect',
-                url: '/api/brain/auth/microsoft/login',
-                button_text: 'Mit Microsoft anmelden'
+                text: "Ich brauche Zugriff auf dein Microsoft-Konto, um deinen Kalender und deine Aufgaben zu sehen. Bitte klicke hier zum Anmelden:",
+                ui_payload: {
+                    ui_type: 'auth_redirect',
+                    url: '/api/brain/auth/microsoft/login',
+                    button_text: 'Mit Microsoft anmelden',
+                    text: 'Microsoft Konto für Kalender & Tasks verbinden'
+                }
             };
         }
 
-        // 2. Synthesize Mail results (Gmail + Outlook)
+        // 2. Aggregate Mails (Gmail + Outlook)
         const allMails = [];
         if (results.gmail && results.gmail.mails) allMails.push(...results.gmail.mails);
-        if (results.ms_graph && results.ms_graph.mails) allMails.push(...results.ms_graph.mails);
+        if (msResult.mails) allMails.push(...msResult.mails);
 
         if (allMails.length > 0) {
             allMails.sort((a, b) => new Date(b.date) - new Date(a.date));
-            text += `Ich habe insgesamt ${allMails.length} Mails gefunden. `;
+            text += `Ich habe ${allMails.length} neue Nachrichten gefunden. `;
             ui_payload = {
                 ui_type: 'mail_list',
-                title: '📧 Mail Review (Gmail & Outlook)',
+                title: '📧 Nachrichten-Übersicht',
                 count: allMails.length,
                 mails: allMails
             };
