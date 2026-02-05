@@ -213,6 +213,7 @@ export class MsGraphAgent extends AgentBase {
             from: m.from?.emailAddress?.name || m.from?.emailAddress?.address || 'Unbekannt',
             date: m.receivedDateTime,
             snippet: m.bodyPreview,
+            source: 'outlook'
         }));
 
         this._log('mails_fetched', { count: mails.length });

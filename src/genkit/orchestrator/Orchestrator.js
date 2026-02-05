@@ -141,11 +141,30 @@ export class Orchestrator {
         if (results.ms_graph) {
             if (results.ms_graph.events) {
                 text += `Du hast ${results.ms_graph.events.length || results.ms_graph.count} anstehende Termine. `;
+                if (!ui_payload) {
+                    ui_payload = {
+                        ui_type: 'calendar_list',
+                        title: '📅 Kalender (Anstehend)',
+                        events: results.ms_graph.events
+                    };
+                }
             }
             if (results.ms_graph.tasks) {
-                text += `Es gibt ${results.ms_graph.tasks.length || results.ms_graph.count} offene Aufgaben in MS To-Do. `;
+                const openCount = results.ms_graph.tasks.length || results.ms_graph.count;
+                text += `Es gibt ${openCount} offene Aufgaben in MS To-Do. `;
+                if (!ui_payload || ui_payload.ui_type === 'calendar_list') {
+                    // If we already have a payload, maybe merge or just keep the first?
+                    // Usually the user asks for one specific thing.
+                    if (!ui_payload) {
+                        ui_payload = {
+                            ui_type: 'task_list_v2',
+                            title: '✅ MS To-Do Aufgaben',
+                            data: results.ms_graph.tasks
+                        };
+                    }
+                }
             }
-            if (results.ms_graph.summary && !allMails.length) {
+            if (results.ms_graph.summary && !allMails.length && !results.ms_graph.events && !results.ms_graph.tasks) {
                 text += results.ms_graph.summary;
             }
         }
@@ -154,9 +173,14 @@ export class Orchestrator {
             text = "Ich habe die Analyse abgeschlossen und die entsprechenden Cluster abgefragt.";
         }
 
+        // 4. Merge UI components into text for frontend parsing
+        let finalOutput = text.trim();
+        if (ui_payload) {
+            finalOutput += `\n\n\`\`\`json\n${JSON.stringify(ui_payload, null, 2)}\n\`\`\``;
+        }
+
         return {
-            text: text.trim(),
-            ui: ui_payload,
+            text: finalOutput,
             details: results
         };
     }

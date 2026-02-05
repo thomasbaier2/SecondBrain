@@ -610,6 +610,7 @@
 
         function renderA2UICard(cont, pay) {
             const card = document.createElement('div'); card.className = 'a2ui-card';
+
             if (pay.ui_type === 'task_list') {
                 const header = pay.title || 'Fokus Aufgaben';
                 card.innerHTML = `<div class="a2ui-header"><span>${header}</span></div>`;
@@ -620,22 +621,50 @@
                 });
             } else if (pay.ui_type === 'mail_list') {
                 const header = pay.title || '📧 Mails';
-                card.innerHTML = `<div class="a2ui-header"><span>${header}</span><span style="font-size:11px;color:#64748b;">${pay.count || 0} Mails</span></div>`;
-                (pay.mails || []).slice(0, 10).forEach((m, idx) => {
-                    const i = document.createElement('div'); i.className = 'a2ui-task-item';
+                const cardId = 'mail-card-' + Date.now();
+                card.id = cardId;
+
+                let h = `<div class="a2ui-header"><span>${header}</span><span style="font-size:11px;color:#64748b;">${pay.count || 0} Mails</span></div>`;
+
+                // Add account filters
+                h += `<div style="padding: 8px 20px; display: flex; gap: 8px; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+                        <button class="a2ui-badge" style="cursor:pointer; border:1px solid #e2e8f0;" onclick="filterCardMails('${cardId}', 'all')">Alle</button>
+                        <button class="a2ui-badge" style="cursor:pointer; border:1px solid #e2e8f0; background:#ea4335; color:white;" onclick="filterCardMails('${cardId}', 'gmail')">Gmail</button>
+                        <button class="a2ui-badge" style="cursor:pointer; border:1px solid #e2e8f0; background:#0078d4; color:white;" onclick="filterCardMails('${cardId}', 'outlook')">Outlook</button>
+                      </div>`;
+                card.innerHTML = h;
+
+                (pay.mails || []).forEach((m, idx) => {
+                    const i = document.createElement('div');
+                    i.className = 'a2ui-task-item mail-item';
+                    i.dataset.source = m.source || 'unknown';
                     const fromName = m.from.replace(/<[^>]+>/g, '').trim().substring(0, 25);
-                    const subjectShort = m.subject.substring(0, 40) + (m.subject.length > 40 ? '...' : '');
+                    const subjectShort = m.subject.substring(0, 50) + (m.subject.length > 50 ? '...' : '');
                     const mailDate = m.date ? new Date(m.date) : null;
                     const dateStr = mailDate ? mailDate.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }) : '';
                     const timeStr = mailDate ? mailDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
-                    i.innerHTML = `<div class="task-index">${idx + 1}</div><div class="task-info"><div class="task-title">${subjectShort}</div><div class="task-sub"><span class="a2ui-badge badge-score">👤 ${fromName}</span><span class="a2ui-badge badge-date">📅 ${dateStr}</span><span class="a2ui-badge badge-time">🕒 ${timeStr}</span></div></div>`;
+                    const sourceIcon = (m.source === 'gmail') ? '🔴' : '🔵';
+
+                    i.innerHTML = `<div class="task-index">${idx + 1}</div><div class="task-info"><div class="task-title">${subjectShort}</div><div class="task-sub"><span class="a2ui-badge" style="background:#f1f5f9; color:#475569;">${sourceIcon} ${fromName}</span><span class="a2ui-badge badge-date">📅 ${dateStr}</span><span class="a2ui-badge badge-time">🕒 ${timeStr}</span></div></div>`;
                     card.appendChild(i);
                 });
-                if ((pay.mails || []).length > 10) {
-                    const more = document.createElement('div'); more.style = "padding:12px 20px; text-align:center; color:#64748b; font-size:12px;";
-                    more.innerText = `... und ${pay.mails.length - 10} weitere`;
-                    card.appendChild(more);
-                }
+            } else if (pay.ui_type === 'calendar_list') {
+                card.innerHTML = `<div class="a2ui-header"><span>${pay.title || '📅 Kalender'}</span></div>`;
+                (pay.events || []).forEach((e, idx) => {
+                    const i = document.createElement('div'); i.className = 'a2ui-task-item';
+                    const start = e.start ? new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    const date = e.start ? new Date(e.start).toLocaleDateString([], { day: '2-digit', month: '2-digit' }) : 'Heute';
+                    i.innerHTML = `<div class="task-index">${idx + 1}</div><div class="task-info"><div class="task-title">${e.subject}</div><div class="task-sub"><span class="a2ui-badge badge-time">🕒 ${start}</span><span class="a2ui-badge badge-date">📅 ${date}</span>${e.location ? `<span class="a2ui-badge" style="background:#f1f5f9;">📍 ${e.location}</span>` : ''}</div></div>`;
+                    card.appendChild(i);
+                });
+            } else if (pay.ui_type === 'task_list_v2') {
+                card.innerHTML = `<div class="a2ui-header"><span>${pay.title || '✅ Aufgaben'}</span></div>`;
+                (pay.data || []).forEach((t, idx) => {
+                    const i = document.createElement('div'); i.className = 'a2ui-task-item';
+                    const imp = t.importance === 'high' ? '🔥' : '📌';
+                    i.innerHTML = `<div class="task-index" style="background:#e0f2fe; color:#0369a1;">${idx + 1}</div><div class="task-info"><div class="task-title">${t.title}</div><div class="task-sub"><span class="a2ui-badge">${imp} ${t.status}</span>${t.dueDate ? `<span class="a2ui-badge badge-date">📅 ${new Date(t.dueDate).toLocaleDateString()}</span>` : ''}</div></div>`;
+                    card.appendChild(i);
+                });
             } else if (pay.ui_type === 'auth_redirect') {
                 card.innerHTML = `<div class="a2ui-header"><span>🔒 Login erforderlich</span></div><div style="padding: 24px; text-align: center;"><p style="font-size: 14px; margin-bottom: 20px; color: #475569;">${pay.text || 'Bitte melde dich an.'}</p><a href="${pay.url}" target="_blank" class="send-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; padding: 12px 24px; border-radius: 12px; font-weight: 600;">${pay.button_text || 'Anmelden'}</a></div>`;
             } else if (pay.ui_type === 'data_table' || pay.ui_type === 'routine_briefing') {
@@ -647,6 +676,18 @@
             }
             cont.appendChild(card);
         }
+
+        window.filterCardMails = (cardId, source) => {
+            const card = document.getElementById(cardId);
+            const items = card.querySelectorAll('.mail-item');
+            items.forEach(item => {
+                if (source === 'all' || item.dataset.source === source) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        };
 
         window.sendMessage = async () => {
             const i = document.getElementById('message-input'); const m = i.value.trim(); if (!m) return;

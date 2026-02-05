@@ -84,7 +84,8 @@ export class GmailAgent extends AgentBase {
                 subject,
                 from,
                 date,
-                snippet
+                snippet,
+                source: 'gmail'
             });
         }
 
