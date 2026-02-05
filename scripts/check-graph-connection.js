@@ -36,33 +36,45 @@ async function checkConnection() {
         }
 
         // Test Calendar
-        console.log('📅 Rufe Kalender ab...');
-        const now = new Date();
-        const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Test 7 days
-        console.log(`   Query: ${now.toISOString()} - ${end.toISOString()}`);
-        const calendar = await agent.getCalendarEvents(client, 7);
-        console.log(`   Erfolg: ${calendar.count} Termine gefunden.`);
+        try {
+            console.log('📅 Rufe Kalender ab...');
+            const now = new Date();
+            const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Test 7 days
+            console.log(`   Query: ${now.toISOString()} - ${end.toISOString()}`);
+            const calendar = await agent.getCalendarEvents(client, 7);
+            console.log(`   Erfolg: ${calendar.count} Termine gefunden.`);
+        } catch (calErr) {
+            console.error('❌ Fehler in Kalender-API:', calErr.message);
+        }
 
         // Test Tasks
-        console.log('\n✅ Rufe To-dos ab...');
-        const listsRes = await client.api('/me/todo/lists').get();
-        const lists = listsRes.value || [];
-        console.log(`   Verfügbare Listen (${lists.length}): ${lists.map(l => l.displayName).join(', ')}`);
+        try {
+            console.log('\n✅ Rufe To-dos ab...');
+            const listsRes = await client.api('/me/todo/lists').get();
+            const lists = listsRes.value || [];
+            console.log(`   Verfügbare Listen (${lists.length}): ${lists.map(l => l.displayName).join(', ')}`);
 
-        const tasks = await agent.getToDoTasks(client);
-        console.log(`   Erfolg: ${tasks.count} Aufgaben gefunden in Standard-Liste.`);
+            const tasks = await agent.getToDoTasks(client);
+            console.log(`   Erfolg: ${tasks.count} Aufgaben gefunden in Standard-Liste.`);
+        } catch (taskErr) {
+            console.error('❌ Fehler in To-do-API:', taskErr.message);
+        }
 
         // Test Mail
-        console.log('\n📧 Rufe Outlook-Mails ab...');
-        const mailDate = new Date();
-        mailDate.setDate(mailDate.getDate() - 7);
-        console.log(`   Query: newer than ${mailDate.toISOString()}`);
-        const mails = await agent.getMails(client, 7);
-        console.log(`   Erfolg: ${mails.count} Mails gefunden.`);
+        try {
+            console.log('\n📧 Rufe Outlook-Mails ab...');
+            const mailDate = new Date();
+            mailDate.setDate(mailDate.getDate() - 7);
+            console.log(`   Query: newer than ${mailDate.toISOString()}`);
+            const mails = await agent.getMails(client, 7);
+            console.log(`   Erfolg: ${mails.count} Mails gefunden.`);
+        } catch (mailErr) {
+            console.error('❌ Fehler in Mail-API:', mailErr.message);
+        }
 
         console.log('\n✨ Diagnose abgeschlossen.');
     } catch (e) {
-        console.error('\n❌ API-FEHLER:');
+        console.error('\n❌ ALLGEMEINER API-FEHLER:');
         console.error(e.message);
         if (e.body) console.error('Response Body:', e.body);
     }

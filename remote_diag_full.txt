@@ -1,0 +1,19 @@
+🛡️  Sonia MS Graph Connection Audit
+
+✅ Token-Datei gefunden.
+👤 Account: thomas.baier@nunc-it.com
+📅 Läuft ab: 2/5/2026, 9:27:57 PM
+[MsGraph] Agent Context: {
+  hasClientId: true,
+  clientIdMask: '66717...',
+  authority: 'https://login.microsoftonline.com/bd2a9db9-9bf1-4338-b7a7-94eaefa12dc5',
+  hasClientSecret: true
+}
+
+📡 Teste API-Verbindung...
+📅 Rufe Kalender ab...
+   Query: 2026-02-05T20:30:38.555Z - 2026-02-12T20:30:38.555Z
+   Erfolg: 6 Termine gefunden.
+
+✅ Rufe To-dos ab...
+   Verfügbare Listen (3): Aufgaben, Co-Experten Programm, Flagged Emails
