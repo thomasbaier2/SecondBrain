@@ -102,8 +102,8 @@ app.post('/api/brain/chat', async (req, res) => {
     try {
         const msg = (req.body.message || '').toLowerCase();
 
-        // Route mail/gmail requests through Orchestrator for proper UI
-        if (msg.includes('mail') || msg.includes('gmail') || msg.includes('review')) {
+        // Route mail/gmail/sync requests through Orchestrator for proper UI
+        if (msg.includes('mail') || msg.includes('gmail') || msg.includes('review') || msg.includes('sync') || msg.includes('morgen') || msg.includes('routine')) {
             const result = await orchestrator.processRequest(req.body);
             return res.json(result);
         }
