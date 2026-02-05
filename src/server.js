@@ -160,10 +160,32 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         module: 'second-brain',
-        version: '1.0.0',
+        version: '1.1.0', // Incremented for verification
         commit: commit,
         storage: brainStorage.storagePath
     });
+});
+
+// Admin Diagnostic Endpoints (Internal use)
+app.get('/api/admin/logs', (req, res) => {
+    // Only allow if DEPLOY_SECRET is provided as a query param for simple security
+    if (req.query.secret !== process.env.DEPLOY_SECRET) return res.status(401).send('Unauthorized');
+
+    exec('tail -n 100 ~/.pm2/logs/tb-assistant-out.log', (err, stdout) => {
+        if (err) return res.status(500).send(err.message);
+        res.type('text/plain').send(stdout);
+    });
+});
+
+app.get('/api/admin/check-graph', async (req, res) => {
+    if (req.query.secret !== process.env.DEPLOY_SECRET) return res.status(401).send('Unauthorized');
+
+    try {
+        const result = await execSync('node scripts/check-graph-connection.js', { encoding: 'utf8' });
+        res.type('text/plain').send(result);
+    } catch (err) {
+        res.status(500).type('text/plain').send(err.stdout || err.message);
+    }
 });
 
 // --- AUTO-DEPLOY WEBHOOK ---
