@@ -169,7 +169,12 @@ export class Orchestrator {
         }
 
         // 4. Special Case: Sync/Routine Request (Morning Briefing)
-        if (input.message.toLowerCase().includes('sync') || input.message.toLowerCase().includes('morgen') || input.message.toLowerCase().includes('routine')) {
+        const isSync = (session.steps || []).some(s => s.data?.isSyncRequest) ||
+            input.message.toLowerCase().includes('sync') ||
+            input.message.toLowerCase().includes('morgen') ||
+            input.message.toLowerCase().includes('routine');
+
+        if (isSync) {
             const sections = [];
 
             // MS Graph Data (Calendar & Tasks)
@@ -187,22 +192,27 @@ export class Orchestrator {
                 sections.push({ title: 'Neue Nachrichten', type: 'mails', data: allMails });
             }
 
-            if (sections.length > 0) {
-                text = "Guten Morgen! Hier ist dein aktueller Überblick für heute:";
+            // Always set a persona text for sync requests
+            text = "Guten Morgen! Hier ist dein aktueller Überblick für heute:";
 
+            if (sections.length > 0) {
                 // Add LLM Analysis for the mails if they exist
                 if (allMails.length > 0) {
                     const analysisText = await this._analyzeMailContent(allMails);
                     text += "\n\n" + analysisText;
+                } else {
+                    text += "\n\nIch habe deine Postfächer geprüft: Es gibt aktuell keine neuen ungelesenen Nachrichten für dich.";
                 }
-
-                ui_payload = {
-                    ui_type: 'routine_briefing',
-                    title: '🌅 Dein Morgen-Briefing',
-                    sections,
-                    footer: 'Einen erfolgreichen Tag wünscht dir Sonia! 🦾'
-                };
+            } else {
+                text += "\n\nEs ist alles ruhig! Ich konnte keine anstehenden Termine, offenen Aufgaben oder neuen Mails finden. Genieß deinen entspannten Tag! 🦾";
             }
+
+            ui_payload = {
+                ui_type: 'routine_briefing',
+                title: '🌅 Dein Morgen-Briefing',
+                sections: sections.length > 0 ? sections : [{ title: 'Alles Erledigt', type: 'tasks', data: [{ title: 'Keine anstehenden Aufgaben' }] }],
+                footer: 'Einen erfolgreichen Tag wünscht dir Sonia! 🦾'
+            };
         }
 
         // 3. Fallback Synthesize (if not a routine sync)
