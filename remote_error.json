@@ -1,0 +1,9 @@
+⚡ Triggering IONOS Webhook for Debugging...
+
+--- SERVER RESPONSE ---
+Status Code: 500
+Body: {
+  "error": "Command failed: git pull origin master && pm2 restart tb-assistant\nFrom github.com:thomasbaier2/SecondBrain\n * branch            master     -> FETCH_HEAD\nerror: Your local changes to the following files would be overwritten by merge:\n\tpackage-lock.json\nPlease commit your changes or stash them before you merge.\nAborting\n"
+}
+-----------------------
+

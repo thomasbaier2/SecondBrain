@@ -32,10 +32,14 @@ export class Orchestrator {
 
         // 2. Parallel Agent Execution (Clustering)
         const agentTasks = [];
+        let days = 14;
+        const msgLow = input.message.toLowerCase();
+        if (msgLow.includes('woche')) days = 7;
+        else if (msgLow.includes('heute') || msgLow.includes('morgen')) days = 1;
 
         if (analysis.domains.includes('gmail')) {
             const gmailAction = analysis.isSyncRequest ? 'sync_eisenhauer' : 'basic_review';
-            agentTasks.push(this._runAgent('gmail', { action: gmailAction, days: 14 }, session, results));
+            agentTasks.push(this._runAgent('gmail', { action: gmailAction, days: days }, session, results));
         }
         if (analysis.domains.includes('salesforce')) {
             agentTasks.push(this._runAgent('salesforce', { action: 'sync_opportunities' }, session, results));
@@ -55,7 +59,7 @@ export class Orchestrator {
                 msAction = 'get_mails';
             }
 
-            agentTasks.push(this._runAgent('ms_graph', { action: msAction, days: 7, details }, session, results));
+            agentTasks.push(this._runAgent('ms_graph', { action: msAction, days: days, details }, session, results));
         }
 
         await Promise.all(agentTasks);
@@ -119,7 +123,7 @@ export class Orchestrator {
             domains,
             intents,
             appointmentDetails,
-            isSyncRequest: msg.includes('sync') || msg.includes('routine') || msg.includes('morgen') || msg.includes('review')
+            isSyncRequest: msg.includes('sync') || msg.includes('routine') || msg.includes('morgen') || msg.includes('review') || msg.includes('woche') || msg.includes('heute') || msg.includes('zusammenfassung') || msg.includes('überblick')
         };
     }
 
@@ -172,7 +176,11 @@ export class Orchestrator {
         const isSync = (session.steps || []).some(s => s.data?.isSyncRequest) ||
             input.message.toLowerCase().includes('sync') ||
             input.message.toLowerCase().includes('morgen') ||
-            input.message.toLowerCase().includes('routine');
+            input.message.toLowerCase().includes('routine') ||
+            input.message.toLowerCase().includes('woche') ||
+            input.message.toLowerCase().includes('heute') ||
+            input.message.toLowerCase().includes('zusammenfassung') ||
+            input.message.toLowerCase().includes('überblick');
 
         if (isSync) {
             const sections = [];
