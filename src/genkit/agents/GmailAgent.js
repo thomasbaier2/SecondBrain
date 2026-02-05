@@ -81,8 +81,13 @@ export class GmailAgent extends AgentBase {
      * Handle the callback and exchange code for tokens
      */
     async handleCallback(code) {
-        const { tokens } = await this.oauth2Client.getToken(code);
-        this.oauth2Client.setCredentials(tokens);
+        const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            process.env.GOOGLE_REDIRECT_URI
+        );
+
+        const { tokens } = await oauth2Client.getToken(code);
 
         // Save tokens to storage
         await this.storage.storeItem('preference', {
