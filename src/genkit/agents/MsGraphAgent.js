@@ -248,6 +248,12 @@ export class MsGraphAgent extends AgentBase {
             return { count: 0, tasks: [], message: 'Keine To-Do Liste gefunden.' };
         }
 
+        if (!targetList.id) {
+            console.error('[MsGraph] FEHLER: Gewählte Liste hat keine ID!', targetList);
+            return { count: 0, tasks: [], message: 'Fehler: Liste ohne ID.' };
+        }
+
+        console.log(`[MsGraph] Lade Aufgaben aus Liste: "${targetList.displayName}" (ID: ${targetList.id})`);
         this._log('tasks_list_selected', { name: targetList.displayName, id: targetList.id });
 
         const tasksRes = await client.api(`/me/todo/lists/${targetList.id}/tasks`)

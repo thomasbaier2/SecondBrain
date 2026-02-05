@@ -12,15 +12,48 @@
 
 📡 Teste API-Verbindung...
 📅 Rufe Kalender ab...
-   Query: 2026-02-05T20:35:30.319Z - 2026-02-12T20:35:30.319Z
+   Query: 2026-02-05T20:37:06.050Z - 2026-02-12T20:37:06.050Z
    Erfolg: 6 Termine gefunden.
 
 ✅ Rufe To-dos ab...
    Verfügbare Listen (3): Aufgaben, Co-Experten Programm, Flagged Emails
    >>> Starte getToDoTasks...
+❌ Fehler in To-do-API: Invalid request
+GraphError: Invalid request
+    at new GraphError (/var/www/tb-assistant/node_modules/@microsoft/microsoft-graph-client/lib/src/GraphError.js:34:28)
+    at GraphErrorHandler.constructErrorFromResponse (/var/www/tb-assistant/node_modules/@microsoft/microsoft-graph-client/lib/src/GraphErrorHandler.js:63:22)
+    at Function.<anonymous> (/var/www/tb-assistant/node_modules/@microsoft/microsoft-graph-client/lib/src/GraphErrorHandler.js:91:48)
+    at step (/var/www/tb-assistant/node_modules/tslib/tslib.js:196:27)
+    at Object.next (/var/www/tb-assistant/node_modules/tslib/tslib.js:177:57)
+    at /var/www/tb-assistant/node_modules/tslib/tslib.js:170:75
+    at new Promise (<anonymous>)
+    at Object.__awaiter (/var/www/tb-assistant/node_modules/tslib/tslib.js:166:16)
+    at GraphErrorHandler.getError (/var/www/tb-assistant/node_modules/@microsoft/microsoft-graph-client/lib/src/GraphErrorHandler.js:87:24)
+    at GraphRequest.<anonymous> (/var/www/tb-assistant/node_modules/@microsoft/microsoft-graph-client/lib/src/GraphRequest.js:315:84) {
+  statusCode: 400,
+  code: 'invalidRequest',
+  requestId: 'bc257bb4-af72-471b-b3f6-603994f05f12',
+  date: 2026-02-05T20:37:06.000Z,
+  body: '{"code":"invalidRequest","message":"Invalid request","innerError":{"code":"RequestBroker--ParseUri","date":"2026-02-05T20:37:06","request-id":"bc257bb4-af72-471b-b3f6-603994f05f12","client-request-id":"e58d3bf3-e867-f062-60ea-8bfaf1c860a9"}}',
+  headers: HeadersList {
+    cookies: null,
+    [Symbol(headers map)]: Map(9) {
+      'transfer-encoding' => [Object],
+      'content-type' => [Object],
+      'content-encoding' => [Object],
+      'vary' => [Object],
+      'strict-transport-security' => [Object],
+      'request-id' => [Object],
+      'client-request-id' => [Object],
+      'x-ms-ags-diagnostic' => [Object],
+      'date' => [Object]
+    },
+    [Symbol(headers map sorted)]: null
+  }
+}
 
 📧 Rufe Outlook-Mails ab...
-   Query: newer than 2026-01-29T20:35:30.930Z
+   Query: newer than 2026-01-29T20:37:06.510Z
    Erfolg: 20 Mails gefunden.
 
 ✨ Diagnose abgeschlossen.
