@@ -618,6 +618,22 @@
                     i.innerHTML = `<div class="task-index">${t.index}</div><input type="checkbox" class="task-checkbox" ${t.status === 'completed' ? 'checked' : ''} onchange="completeTask('${t.id}', this.checked)"><div class="task-info"><div class="task-title">${t.title}</div><div class="task-sub"><span class="a2ui-badge badge-score">W:${t.importance || 5} D:${t.urgency || 5}</span>${t.effort ? `<span class="a2ui-badge badge-effort">⏱️ ${t.effort}m</span>` : ''}${t.date ? `<span class="a2ui-badge badge-date">📅 ${t.date}</span>` : ''}${t.time ? `<span class="a2ui-badge badge-time">🕒 ${t.time}</span>` : ''}</div></div><div class="a2ui-actions"><button class="a2ui-btn-icon" onclick="deleteTask('${t.id}')">🗑️</button></div>`;
                     card.appendChild(i);
                 });
+            } else if (pay.ui_type === 'mail_list') {
+                const header = pay.title || '📧 Mails';
+                card.innerHTML = `<div class="a2ui-header"><span>${header}</span><span style="font-size:11px;color:#64748b;">${pay.count || 0} Mails</span></div>`;
+                (pay.mails || []).slice(0, 10).forEach((m, idx) => {
+                    const i = document.createElement('div'); i.className = 'a2ui-task-item';
+                    const fromName = m.from.replace(/<[^>]+>/g, '').trim().substring(0, 25);
+                    const subjectShort = m.subject.substring(0, 40) + (m.subject.length > 40 ? '...' : '');
+                    const dateShort = m.date ? new Date(m.date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }) : '';
+                    i.innerHTML = `<div class="task-index">${idx + 1}</div><div class="task-info"><div class="task-title">${subjectShort}</div><div class="task-sub"><span class="a2ui-badge badge-score">👤 ${fromName}</span><span class="a2ui-badge badge-date">📅 ${dateShort}</span></div></div>`;
+                    card.appendChild(i);
+                });
+                if ((pay.mails || []).length > 10) {
+                    const more = document.createElement('div'); more.style = "padding:12px 20px; text-align:center; color:#64748b; font-size:12px;";
+                    more.innerText = `... und ${pay.mails.length - 10} weitere`;
+                    card.appendChild(more);
+                }
             } else if (pay.ui_type === 'data_table' || pay.ui_type === 'routine_briefing') {
                 let h = `<div class="a2ui-header"><span>${pay.title || 'Briefing'}</span></div><div class="a2ui-table-container"><table class="a2ui-table"><thead><tr>`;
                 (pay.columns || []).forEach(c => h += `<th>${c}</th>`);

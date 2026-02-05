@@ -97,8 +97,18 @@ export class Orchestrator {
     }
 
     async _synthesizeResponse(input, results, session) {
-        // This will eventually call the Sonia Persona flow with aggregated results
-        // For now, return a placeholder
+        // Check if we have gmail mail review results
+        if (results.gmail && results.gmail.mails) {
+            return {
+                text: results.gmail.summary || `Hier sind deine ${results.gmail.count} neuesten Mails:`,
+                ui_type: 'mail_list',
+                title: '📧 Mail Review (14 Tage)',
+                count: results.gmail.count,
+                mails: results.gmail.mails
+            };
+        }
+
+        // Default response for other agent results
         return {
             text: "Ich habe die Analyse abgeschlossen und die entsprechenden Cluster abgefragt.",
             details: results
