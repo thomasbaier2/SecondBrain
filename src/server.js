@@ -66,6 +66,28 @@ const brainRoutes = createBrainRoutes(brainStorage, {
 
 app.use('/api/brain', brainRoutes);
 
+// Direct Auth Routes (for debugging and better visibility)
+app.get('/api/brain/ping', (req, res) => res.json({ status: 'ok', source: 'server.js' }));
+
+app.get('/api/brain/auth/google/login', async (req, res) => {
+    try {
+        const { url } = await gmailAgent.run({ action: 'get_auth_url' });
+        res.redirect(url);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/brain/auth/google/callback', async (req, res) => {
+    try {
+        const { code } = req.query;
+        await gmailAgent.handleCallback(code);
+        res.send('<h1>Authentifizierung erfolgreich!</h1><p>Du kannst dieses Fenster jetzt schließen und Sonia bitten, deine Mails zu synchronisieren.</p>');
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Genkit Flows
 import { suggestTask } from './genkit/flows/suggestTask.js';
 import { indexDocument } from './genkit/flows/indexDocs.js';
