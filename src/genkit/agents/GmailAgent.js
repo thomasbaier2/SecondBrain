@@ -47,9 +47,53 @@ export class GmailAgent extends AgentBase {
         switch (task.action) {
             case 'sync_eisenhauer':
                 return this.syncEisenhauerMails(auth);
+            case 'basic_review':
+                return this.basicReview(auth, task.days || 14);
             default:
                 throw new Error(`Unknown action: ${task.action}`);
         }
+    }
+
+    /**
+     * Basic review of recent mails
+     */
+    async basicReview(auth, days = 14) {
+        const gmail = google.gmail({ version: 'v1', auth });
+
+        // Calculate date for the query (newer_than:14d)
+        const query = `newer_than:${days}d`;
+
+        const res = await gmail.users.messages.list({
+            userId: 'me',
+            q: query,
+            maxResults: 20
+        });
+
+        const messages = res.data.messages || [];
+        const mailSummaries = [];
+
+        for (const msgInfo of messages) {
+            const msg = await gmail.users.messages.get({ userId: 'me', id: msgInfo.id });
+            const subject = msg.data.payload.headers.find(h => h.name === 'Subject')?.value || 'Kein Betreff';
+            const from = msg.data.payload.headers.find(h => h.name === 'From')?.value || 'Unbekannt';
+            const date = msg.data.payload.headers.find(h => h.name === 'Date')?.value;
+            const snippet = msg.data.snippet;
+
+            mailSummaries.push({
+                id: msgInfo.id,
+                subject,
+                from,
+                date,
+                snippet
+            });
+        }
+
+        this._log('basic_review_complete', { count: mailSummaries.length });
+        return {
+            count: mailSummaries.length,
+            mails: mailSummaries,
+            summary: `Ich habe ${mailSummaries.length} Mails aus den letzten ${days} Tagen gefunden.`
+        };
     }
 
     /**

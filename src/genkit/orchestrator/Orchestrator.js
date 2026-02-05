@@ -34,7 +34,8 @@ export class Orchestrator {
         const agentTasks = [];
 
         if (analysis.domains.includes('gmail')) {
-            agentTasks.push(this._runAgent('gmail', { action: 'sync_eisenhauer' }, session, results));
+            const gmailAction = analysis.isSyncRequest ? 'sync_eisenhauer' : 'basic_review';
+            agentTasks.push(this._runAgent('gmail', { action: gmailAction, days: 14 }, session, results));
         }
         if (analysis.domains.includes('salesforce')) {
             agentTasks.push(this._runAgent('salesforce', { action: 'sync_opportunities' }, session, results));

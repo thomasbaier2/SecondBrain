@@ -202,6 +202,30 @@ export function createBrainRoutes(brainStorage, options = {}) {
         }
     });
 
+    // --- BRAIN ACTIONS ---
+
+    // Generic chat/orchestration endpoint
+    router.post('/chat', async (req, res) => {
+        try {
+            const result = await orchestrator.processRequest(req.body);
+            res.json(result);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
+    // Specific review endpoint (Daily Briefing)
+    router.get('/review', async (req, res) => {
+        try {
+            const result = await orchestrator.processRequest({
+                message: "Gib mir einen Review der Mails der letzten 14 Tage."
+            });
+            res.json(result);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
     /**
      * POST /api/brain/preferences
      * Update user preferences
