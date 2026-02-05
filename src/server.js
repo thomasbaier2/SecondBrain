@@ -148,18 +148,25 @@ app.post('/api/brain/suggest', async (req, res) => {
 });
 
 // Health check endpoint
+import { exec, execSync } from 'child_process';
+import crypto from 'crypto';
+
 app.get('/health', (req, res) => {
+    let commit = 'unknown';
+    try {
+        commit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    } catch (e) { }
+
     res.json({
         status: 'ok',
         module: 'second-brain',
         version: '1.0.0',
+        commit: commit,
         storage: brainStorage.storagePath
     });
 });
 
 // --- AUTO-DEPLOY WEBHOOK ---
-import { exec } from 'child_process';
-import crypto from 'crypto';
 
 app.post('/api/deploy', (req, res) => {
     const secret = process.env.DEPLOY_SECRET;
