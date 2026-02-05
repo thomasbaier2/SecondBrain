@@ -137,6 +137,30 @@ export class Orchestrator {
             };
         }
 
+        // 4. Special Case: Sync/Routine Request (Morning Briefing)
+        if (input.message.toLowerCase().includes('sync') || input.message.toLowerCase().includes('morgen') || input.message.toLowerCase().includes('routine')) {
+            const sections = [];
+
+            if (results.ms_graph?.events?.length) {
+                sections.push({ title: 'Anstehende Termine', type: 'calendar', data: results.ms_graph.events });
+            }
+            if (results.ms_graph?.tasks?.length) {
+                sections.push({ title: 'Deine Aufgaben', type: 'tasks', data: results.ms_graph.tasks });
+            }
+            if (allMails.length > 0) {
+                sections.push({ title: 'Neue Nachrichten', type: 'mails', data: allMails });
+            }
+
+            if (sections.length > 0) {
+                ui_payload = {
+                    ui_type: 'routine_briefing',
+                    title: '🌅 Dein Morgen-Briefing',
+                    sections,
+                    footer: 'Einen erfolgreichen Tag wünscht dir Sonia! 🦾'
+                };
+            }
+        }
+
         // 3. Synthesize MS Graph results (Calendar & Tasks)
         if (results.ms_graph) {
             if (results.ms_graph.events) {
