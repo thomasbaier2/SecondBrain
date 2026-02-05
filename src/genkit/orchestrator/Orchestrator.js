@@ -157,6 +157,7 @@ export class Orchestrator {
             }
 
             if (sections.length > 0) {
+                text = "Guten Morgen! Hier ist dein aktueller Überblick für heute:";
                 ui_payload = {
                     ui_type: 'routine_briefing',
                     title: '🌅 Dein Morgen-Briefing',
@@ -167,18 +168,20 @@ export class Orchestrator {
         }
 
         // 3. Fallback Synthesize (if not a routine sync)
-        if (results.ms_graph && !ui_payload) {
+        if (results.ms_graph && (!ui_payload || ui_payload.ui_type !== 'routine_briefing')) {
             const ms = results.ms_graph;
             const events = ms.calendar?.events || ms.events;
             const tasks = ms.tasks?.tasks || ms.tasks;
 
             if (events) {
                 text += `Du hast ${events.length} anstehende Termine. `;
-                ui_payload = {
-                    ui_type: 'calendar_list',
-                    title: '📅 Kalender (Anstehend)',
-                    events: events
-                };
+                if (!ui_payload) {
+                    ui_payload = {
+                        ui_type: 'calendar_list',
+                        title: '📅 Kalender (Anstehend)',
+                        events: events
+                    };
+                }
             }
             if (tasks) {
                 text += `Es gibt ${tasks.length} offene Aufgaben. `;
@@ -196,7 +199,7 @@ export class Orchestrator {
         }
 
         if (!text) {
-            text = "Ich habe die Analyse abgeschlossen und die entsprechenden Cluster abgefragt.";
+            text = "Ich habe die Analyse abgeschlossen und die entsprechenden Ergebnisse für dich zusammengestellt.";
         }
 
         // 4. Merge UI components into text for frontend parsing
