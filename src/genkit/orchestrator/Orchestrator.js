@@ -98,7 +98,7 @@ export class Orchestrator {
 
         if (intents.mail || msg.includes('sync') || msg.includes('eisenhauer')) domains.push('gmail');
         if (msg.includes('salesforce') || msg.includes('sf') || msg.includes('opp')) domains.push('salesforce');
-        if (intents.calendar || intents.tasks || msg.includes('ms') || msg.includes('microsoft')) domains.push('ms_graph');
+        if (intents.calendar || intents.tasks || msg.includes('ms') || msg.includes('microsoft') || msg.includes('sync')) domains.push('ms_graph');
 
         return {
             domains,
