@@ -111,19 +111,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
-    res.json({
-        message: 'Second Brain API',
-        version: '1.0.0',
-        endpoints: {
-            health: '/health',
-            api: '/api/brain',
-            docs: 'See README.md for API documentation'
-        }
-    });
-});
-
 // Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
