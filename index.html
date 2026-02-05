@@ -590,16 +590,22 @@
         window.addMessage = (text, type) => {
             const h = document.getElementById('chat-history');
             const d = document.createElement('div'); d.className = `message ${type}`;
-            let dt = text; let payload = null;
-            const jm = text.match(/```(?:json|JSON)?\n?([\s\S]*?)```/);
-            if (jm) { try { payload = JSON.parse(jm[1].trim()); dt = text.replace(jm[0], ''); } catch (e) { } }
-            if (!payload) {
-                const rawMatch = text.match(/(\{[\s\S]*\})/);
-                if (rawMatch) { try { const potential = JSON.parse(rawMatch[1].trim()); if (potential.ui_type || potential.action) { payload = potential; dt = text.replace(rawMatch[1], ''); } } catch (e) { } }
-            }
+            let payload = null; let dt = text;
+            try {
+                const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+                if (jsonMatch) {
+                    payload = JSON.parse(jsonMatch[1]);
+                    dt = text.replace(jsonMatch[0], '').trim();
+                    console.log('[A2UI] Detected Payload:', payload);
+                }
+            } catch (e) { console.error('[A2UI] JSON Parse Error:', e); }
+
             dt = dt.replace(/```(?:json|JSON)?/gi, '').replace(/```/g, '').trim();
             d.innerHTML = dt.replace(/\n/g, '<br>');
-            if (payload) { if (payload.action === 'save_preference') handleLearnAction(payload); else renderA2UICard(d, payload); }
+            if (payload) {
+                if (payload.action === 'save_preference') handleLearnAction(payload);
+                else renderA2UICard(d, payload);
+            }
             const m = document.createElement('div'); m.className = 'meta'; m.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             d.appendChild(m); h.appendChild(d); h.scrollTop = h.scrollHeight;
         };
