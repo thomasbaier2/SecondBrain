@@ -16,6 +16,8 @@ export function createBrainRoutes(brainStorage, options = {}) {
     // Optional auth middleware (can be injected)
     const authMiddleware = options.authMiddleware || ((req, res, next) => next());
 
+    router.get('/ping', (req, res) => res.json({ pong: true, mounted: true }));
+
     /**
      * GET /api/brain
      * Fetch all brain data (tasks, contexts, graph)
