@@ -625,8 +625,10 @@
                     const i = document.createElement('div'); i.className = 'a2ui-task-item';
                     const fromName = m.from.replace(/<[^>]+>/g, '').trim().substring(0, 25);
                     const subjectShort = m.subject.substring(0, 40) + (m.subject.length > 40 ? '...' : '');
-                    const dateShort = m.date ? new Date(m.date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }) : '';
-                    i.innerHTML = `<div class="task-index">${idx + 1}</div><div class="task-info"><div class="task-title">${subjectShort}</div><div class="task-sub"><span class="a2ui-badge badge-score">👤 ${fromName}</span><span class="a2ui-badge badge-date">📅 ${dateShort}</span></div></div>`;
+                    const mailDate = m.date ? new Date(m.date) : null;
+                    const dateStr = mailDate ? mailDate.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }) : '';
+                    const timeStr = mailDate ? mailDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+                    i.innerHTML = `<div class="task-index">${idx + 1}</div><div class="task-info"><div class="task-title">${subjectShort}</div><div class="task-sub"><span class="a2ui-badge badge-score">👤 ${fromName}</span><span class="a2ui-badge badge-date">📅 ${dateStr}</span><span class="a2ui-badge badge-time">🕒 ${timeStr}</span></div></div>`;
                     card.appendChild(i);
                 });
                 if ((pay.mails || []).length > 10) {
