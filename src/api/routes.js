@@ -287,12 +287,23 @@ export function createBrainRoutes(brainStorage, options = {}) {
             if (!msGraphAgent) return res.status(500).json({ error: 'MS Graph Agent not initialized' });
             const result = await msGraphAgent.run({ action: 'get_auth_url' });
 
+            if (!result || !result.url) {
+                return res.status(500).send(`
+                    <div style="font-family: sans-serif; padding: 40px; text-align: center; max-width: 500px; margin: auto; border: 1px solid #fee2e2; border-radius: 20px; background: #fef2f2;">
+                        <h1 style="color: #b91c1c;">Login Fehler</h1>
+                        <p>Konnte keine Authentifizierungs-URL von Microsoft abrufen.</p>
+                        <p style="font-size: 12px; color: #7f1d1d; margin-top: 20px;">Bitte prüfe die Logs auf dem Server für Details.</p>
+                        <a href="/" style="display:inline-block; margin-top: 20px; color: #b91c1c;">Zurück zum Chat</a>
+                    </div>
+                `);
+            }
+
             // Return landing page with code and instructions
             res.send(`
                 <div style="font-family: sans-serif; padding: 40px; text-align: center; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
                     <h1 style="color: #0078d4;">Microsoft Login</h1>
                     <p>Öffne den folgenden Link in einem neuen Tab:</p>
-                    <p><a href="${result.url}" target="_blank" style="font-size: 18px; color: #0078d4; font-weight: bold;">${result.url}</a></p>
+                    <p><a href="${result.url}" target="_blank" style="font-size: 18px; color: #0078d4; font-weight: bold;">Link zum Microsoft Login</a></p>
                     <p>Gib dort diesen Code ein:</p>
                     <div style="background: #f4f4f4; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 10px; margin: 20px 0;">${result.code}</div>
                     <p style="color: #666; font-size: 14px;">Nach der Eingabe kannst du dieses Fenster schließen. Sonia wird dann Zugriff auf deinen Kalender und deine Aufgaben haben.</p>

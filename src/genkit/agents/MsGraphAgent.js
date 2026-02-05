@@ -96,10 +96,11 @@ export class MsGraphAgent extends AgentBase {
         return new Promise((resolve, reject) => {
             const deviceCodeRequest = {
                 deviceCodeCallback: (response) => {
-                    this._log('device_code', { code: response.userCode, url: response.verificationUri });
+                    console.log('[MsGraph] Device Code Response:', response);
+                    this._log('device_code', { code: response.userCode, url: response.verificationUri || response.verificationUrl });
                     resolve({
                         code: response.userCode,
-                        url: response.verificationUri,
+                        url: response.verificationUri || response.verificationUrl,
                         message: response.message,
                     });
                 },
