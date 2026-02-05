@@ -587,25 +587,36 @@
         secondBrain.setApiBase('/api/brain');
         let currentMood = 'neutral'; let draggedTask = null; let currentTimeFilter = 'all';
 
-        window.addMessage = (text, type) => {
+        window.addMessage = (text, side, payload = null) => {
             const h = document.getElementById('chat-history');
-            const d = document.createElement('div'); d.className = `message ${type}`;
-            let payload = null; let dt = text;
-            try {
-                const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
-                if (jsonMatch) {
-                    payload = JSON.parse(jsonMatch[1]);
-                    dt = text.replace(jsonMatch[0], '').trim();
-                    console.log('[A2UI] Detected Payload:', payload);
-                }
-            } catch (e) { console.error('[A2UI] JSON Parse Error:', e); }
+            const d = document.createElement('div'); d.className = `message ${side}`;
+            let dt = text || '';
 
+            // Handle embedded JSON if no payload provided
+            if (!payload) {
+                try {
+                    const jsonMatch = dt.match(/```json\n([\s\S]*?)\n```/);
+                    if (jsonMatch) {
+                        payload = JSON.parse(jsonMatch[1]);
+                        dt = dt.replace(jsonMatch[0], '').trim();
+                        console.log('[A2UI] Extracted Payload:', payload);
+                    }
+                } catch (e) {
+                    // Fallback to simpler regex if needed
+                    const rawMatch = dt.match(/(\{[\s\S]*\})/);
+                    if (rawMatch) { try { payload = JSON.parse(rawMatch[1]); dt = dt.replace(rawMatch[1], ''); } catch (err) { } }
+                }
+            }
+
+            // Final text cleaning
             dt = dt.replace(/```(?:json|JSON)?/gi, '').replace(/```/g, '').trim();
             d.innerHTML = dt.replace(/\n/g, '<br>');
+
             if (payload) {
                 if (payload.action === 'save_preference') handleLearnAction(payload);
                 else renderA2UICard(d, payload);
             }
+
             const m = document.createElement('div'); m.className = 'meta'; m.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             d.appendChild(m); h.appendChild(d); h.scrollTop = h.scrollHeight;
         };
@@ -734,9 +745,8 @@
             try {
                 const r = await fetch('/api/brain/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: m, mood: currentMood }) });
                 const d = await r.json();
-                // If response has ui_type, pass as JSON string for renderA2UICard to parse
-                if (d.ui_type) {
-                    addMessage(d.text + '\n```json\n' + JSON.stringify(d) + '\n```', 'bot');
+                if (d.ui_type || d.ui_payload) {
+                    addMessage(d.text, 'bot', d.ui_payload || d);
                 } else {
                     addMessage(d.text || '', 'bot');
                 }
@@ -745,7 +755,12 @@
 
         window.morningSync = async () => {
             addMessage('Starte Morning Routine... 🌀', 'system');
-            try { const r = await fetch('/api/brain/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: "Mach den Morning Sync (Gmail, Salesforce, MS Tasks).", mood: currentMood }) }); const d = await r.json(); addMessage(d.text || '', 'bot'); } catch (e) { }
+            try {
+                const r = await fetch('/api/brain/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: "Mach den Morning Sync (Gmail, Salesforce, MS Tasks).", mood: currentMood }) });
+                const d = await r.json();
+                if (d.ui_type || d.ui_payload) addMessage(d.text, 'bot', d.ui_payload || d);
+                else addMessage(d.text || '', 'bot');
+            } catch (e) { }
         }
 
         window.toggleMoods = () => { const p = document.getElementById('mood-panel'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; };
