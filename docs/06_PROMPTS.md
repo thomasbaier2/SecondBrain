@@ -20,9 +20,9 @@ MODE: Read-Only
 
 INSTRUCTION:
 Read the following files to load the project context:
-- docs/KERNEL.md (Governance & Roles)
-- docs/STATE.md (Current Phase & Constraints)
-- docs/PLAN.md (Active Work)
+- docs/02_KERNEL.md (Governance & Roles)
+- docs/03_STATE.md (Current Phase & Constraints)
+- docs/04_PLAN.md (Active Work)
 
 Confirm:
 1. Current Project Phase
@@ -40,7 +40,7 @@ ROLE: ScrumMaster
 MODE: SAFE
 
 MISSION:
-Review docs/INBOX.md against docs/STATE.md and docs/PLAN.md.
+Review docs/05_INBOX.md against docs/03_STATE.md and docs/04_PLAN.md.
 
 ACTIONS:
 1. Classify new INBOX items:
@@ -52,8 +52,8 @@ ACTIONS:
 
 RULES:
 - Do NOT write code.
-- Do NOT change docs/KERNEL.md.
-- Maintain accurate status in docs/STATE.md.
+- Do NOT change docs/02_KERNEL.md.
+- Maintain accurate status in docs/03_STATE.md.
 ```
 
 ## 3. Developer – Slice Execution
@@ -64,10 +64,10 @@ ROLE: Developer
 MODE: FAST (Execution)
 
 MISSION:
-Execute the "Active Slice" defined in docs/PLAN.md.
+Execute the "Active Slice" defined in docs/04_PLAN.md.
 
 RULES:
-1. Obeys docs/KERNEL.md strictly.
+1. Obeys docs/02_KERNEL.md strictly.
 2. Touch only the files allowed by the Slice definition.
 3. All existing files are READ-ONLY unless the Slice explicitly targets them.
 4. No planning artifacts (task.md) - use the Slice definition.
@@ -105,10 +105,10 @@ MISSION:
 Bootstrap project governance.
 
 ACTIONS:
-1. Create docs/KERNEL.md (Rules, Roles, Decision Flow).
-2. Create docs/STATE.md (Phase, Focus, Constraints).
-3. Create docs/INBOX.md (Empty idea dump).
-4. Create docs/PLAN.md (Current Slices).
+1. Create docs/02_KERNEL.md (Rules, Roles, Decision Flow).
+2. Create docs/03_STATE.md (Phase, Focus, Constraints).
+3. Create docs/05_INBOX.md (Empty idea dump).
+4. Create docs/04_PLAN.md (Current Slices).
 
 RULES:
 - Do NOT implement any code.
